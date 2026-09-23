@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Streamlit
+.streamlit/secrets.toml
+
+# IDEs & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos pesados o temporales no requeridos
+*.mp4
+*.nc
+*.tif
+*.tiff
+
+# Scripts temporales de procesamiento local
+inspect_*.py
+convert_*.py
+simplify_*.py
+copy_*.py
+test_*.py
+run_server.py
+generar_word.py
