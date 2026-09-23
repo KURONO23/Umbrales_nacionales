@@ -31,8 +31,11 @@ def cargar_datos_fecha(fecha: str):
     if not os.path.exists(gpkg_path):
         raise FileNotFoundError(f"No se encontró el GeoPackage para la fecha {fecha}")
         
-    # Cargar GeoPackage
-    gdf = gpd.read_file(gpkg_path, engine="pyogrio")
+    # Cargar GeoPackage con fallback seguro
+    try:
+        gdf = gpd.read_file(gpkg_path, engine="pyogrio")
+    except Exception:
+        gdf = gpd.read_file(gpkg_path)
     
     # Filtrar solo celdas con probabilidad definida (las 3,993 de interés)
     gdf = gdf[gdf["prob"].notnull()].copy()
