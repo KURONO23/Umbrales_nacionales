@@ -36,11 +36,8 @@ wheels/
 Thumbs.db
 desktop.ini
 
-# Archivos pesados o temporales no requeridos
+# Archivos de video no requeridos
 *.mp4
-*.nc
-*.tif
-*.tiff
 
 # Scripts temporales de procesamiento local
 inspect_*.py

@@ -1,2 +1,2 @@
-gdal-bin
-libgdal-dev
+# Paquetes a nivel de sistema operativo
+# pyogrio y shapely proveen binarios precompilados manylinux (GDAL/GEOS incluidos).

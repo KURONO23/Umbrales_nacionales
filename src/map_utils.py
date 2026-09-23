@@ -107,6 +107,7 @@ def crear_mapa_pydeck(
     puntos_alerta=None,
     punto_foco=None,
     red_hidrica_data=None,
+    departamentos_data=None,
     centro_lat=-9.19,
     centro_lon=-75.01,
     zoom=4.8,
@@ -116,13 +117,31 @@ def crear_mapa_pydeck(
     """
     Genera el mapa interactivo WebGL en PyDeck con look & feel Google Flood Hub:
     - GeoJsonLayer para red hídrica ANA (ríos y quebradas brillantes).
+    - GeoJsonLayer para límites departamentales (contorno geopolítico tenue).
     - GeoJsonLayer para polígonos de grilla (con soporte para elevación 3D).
     - ScatterplotLayer (Halos + Núcleos) para balizas de alerta visibles a escala nacional.
     - Anillo de enfoque neon para el distrito/zona seleccionada.
     """
     layers = []
 
-    # 1. Capa de Red Hídrica Nacional (Ríos y Quebradas ANA) - Estilo suave y tenue
+    # 1. Capa de Límites Departamentales (Contorno muy tenue para georreferenciación)
+    if departamentos_data:
+        dept_layer = pdk.Layer(
+            "GeoJsonLayer",
+            departamentos_data,
+            id="limites-departamentales",
+            opacity=0.35,
+            stroked=True,
+            filled=False,
+            get_line_color=[160, 175, 195, 80],  # Línea gris azulada muy suave
+            get_line_width=1,
+            line_width_min_pixels=0.7,
+            pickable=False,
+            auto_highlight=False
+        )
+        layers.append(dept_layer)
+
+    # 2. Capa de Red Hídrica Nacional (Ríos y Quebradas ANA) - Estilo suave y tenue
     if red_hidrica_data:
         rios_layer = pdk.Layer(
             "GeoJsonLayer",

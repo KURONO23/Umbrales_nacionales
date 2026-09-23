@@ -1,16 +1,13 @@
 import os
 import sys
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-venv_site = os.path.join(BASE_DIR, ".venv", "Lib", "site-packages")
-if os.path.exists(venv_site) and venv_site not in sys.path:
-    sys.path.insert(0, venv_site)
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 import streamlit as st
 import pandas as pd
 import altair as alt
-from src.data_loader import obtener_fechas_disponibles, cargar_datos_fecha, cargar_red_hidrica
+from src.data_loader import obtener_fechas_disponibles, cargar_datos_fecha, cargar_red_hidrica, cargar_departamentos
 from src.map_utils import preparar_features_geojson, preparar_features_puntos, crear_mapa_pydeck
 
 st.set_page_config(
@@ -149,7 +146,12 @@ with st.sidebar:
 
 # Cargar datos de la fecha seleccionada
 with st.spinner("Cargando matriz nacional..."):
-    gdf, df_resumen = cargar_datos_fecha(fecha_sel)
+    try:
+        gdf, df_resumen = cargar_datos_fecha(fecha_sel)
+    except Exception as err:
+        st.error(f"❌ Error al cargar datos para la fecha {fecha_sel}: {err}")
+        st.info("Verifique que los archivos de datos en `data/` se encuentren disponibles.")
+        st.stop()
 
 # Departamentos disponibles
 depts_disponibles = sorted([d for d in gdf["DEPARTAMENTO"].unique() if d not in ["Sin Datos", "N/D"]])
@@ -187,8 +189,9 @@ with st.sidebar:
     )
     
     st.markdown("---")
-    st.markdown("#### 🌊 **Capas Hidrológicas y 3D**")
+    st.markdown("#### 🌊 **Capas Territoriales e Hidrológicas**")
     mostrar_rios = st.checkbox("Mostrar Red de Ríos y Quebradas (ANA)", value=True)
+    mostrar_dept = st.checkbox("Mostrar Límites Departamentales", value=True)
     modo_3d = st.toggle("🏢 Modo 3D (Extrusión por Riesgo)", value=False)
     
     st.markdown("---")
@@ -386,12 +389,14 @@ with col_b4:
 geojson_data = preparar_features_geojson(gdf_filtrado, modo=modo_clave)
 puntos_alerta = preparar_features_puntos(gdf_filtrado, modo=modo_clave)
 red_hidrica_data = cargar_red_hidrica() if mostrar_rios else None
+departamentos_data = cargar_departamentos() if mostrar_dept else None
 
 mapa_deck = crear_mapa_pydeck(
     geojson_data=geojson_data,
     puntos_alerta=puntos_alerta,
     punto_foco=punto_foco,
     red_hidrica_data=red_hidrica_data,
+    departamentos_data=departamentos_data,
     centro_lat=centro_lat,
     centro_lon=centro_lon,
     zoom=zoom_mapa,

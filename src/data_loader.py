@@ -97,3 +97,13 @@ def cargar_red_hidrica():
             import json
             return json.load(f)
     return None
+
+@st.cache_data(show_spinner=False)
+def cargar_departamentos():
+    """Carga los límites departamentales del Perú en formato GeoJSON."""
+    geojson_path = os.path.join(DATA_DIR, "departamentos.geojson")
+    if os.path.exists(geojson_path):
+        with open(geojson_path, "r", encoding="utf-8") as f:
+            import json
+            return json.load(f)
+    return None
