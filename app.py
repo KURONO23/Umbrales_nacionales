@@ -142,32 +142,16 @@ with st.sidebar:
         st.error("No se encontraron salidas operativas en `Salidas/` ni en `data/`.")
         st.info("Verifique que existan archivos `grillaPISCO_prob_YYYY-MM-DD.gpkg` en la carpeta `Salidas/`.")
         st.stop()
-        
-    fecha_mas_reciente = fechas[0]
-    
-    def formatear_opcion_fecha(f):
-        if f == fecha_mas_reciente:
-            return f"🟢 {f} (Última Salida · 2:50 PM)"
-        return f"📅 {f}"
-        
-    fecha_sel = st.selectbox(
-        "Fecha de Evaluación:",
-        options=fechas,
-        index=0,
-        format_func=formatear_opcion_fecha,
-        help="Las salidas se actualizan automáticamente todos los días a las 2:50 PM."
-    )
-    
-    col_ref1, col_ref2 = st.columns([3, 1])
-    with col_ref1:
-        if fecha_sel == fecha_mas_reciente:
-            st.caption("🟢 *Salida operativa activa*")
-        else:
-            st.caption(f"🕒 *Histórico: {fecha_sel}*")
-    with col_ref2:
-        if st.button("🔄", help="Refrescar salidas desde GitHub (actualización 2:50 PM)"):
-            st.cache_data.clear()
-            st.rerun()
+    if len(fechas) == 1:
+        fecha_sel = fechas[0]
+        st.markdown(f"""
+        <div style="background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;">
+            <div style="font-size: 0.72rem; color: #8b949e; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Fecha de Evaluación</div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: #58a6ff; margin-top: 2px;">📅 {fecha_sel}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        fecha_sel = st.selectbox("📅 Fecha de Evaluación:", options=fechas, index=0)
 
 # Cargar datos de la fecha seleccionada
 with st.spinner(f"Cargando matriz nacional al {fecha_sel}..."):
@@ -357,8 +341,7 @@ max_pp = gdf["pp"].max() if not gdf.empty else 0.0
 
 with col_tit:
     st.markdown("### **UrbanNuna | Monitoreo Nacional de Inundaciones**")
-    etiqueta_reciente = " · 🟢 **Última Salida Operativa**" if fecha_sel == fechas[0] else " · 🕒 *Histórico*"
-    st.caption(f"Evaluación al **{fecha_sel}**{etiqueta_reciente} · Grilla PISCO (0.1°) · Enfoque Groundsource AI + Firth Logistic")
+    st.caption(f"Evaluación operativa al **{fecha_sel}** en grilla PISCO (0.1°) · Enfoque Groundsource AI + Firth Logistic")
 
 with col_kpi1:
     st.markdown(f"""
