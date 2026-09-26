@@ -139,18 +139,43 @@ with st.sidebar:
     
     fechas = obtener_fechas_disponibles()
     if not fechas:
-        st.error("No se encontraron salidas en la carpeta data.")
+        st.error("No se encontraron salidas operativas en `Salidas/` ni en `data/`.")
+        st.info("Verifique que existan archivos `grillaPISCO_prob_YYYY-MM-DD.gpkg` en la carpeta `Salidas/`.")
         st.stop()
         
-    fecha_sel = st.selectbox("📅 Fecha de Evaluación", options=fechas, index=0)
+    fecha_mas_reciente = fechas[0]
+    
+    def formatear_opcion_fecha(f):
+        if f == fecha_mas_reciente:
+            return f"🟢 {f} (Última Salida · 2:50 PM)"
+        return f"📅 {f}"
+        
+    fecha_sel = st.selectbox(
+        "Fecha de Evaluación:",
+        options=fechas,
+        index=0,
+        format_func=formatear_opcion_fecha,
+        help="Las salidas se actualizan automáticamente todos los días a las 2:50 PM."
+    )
+    
+    col_ref1, col_ref2 = st.columns([3, 1])
+    with col_ref1:
+        if fecha_sel == fecha_mas_reciente:
+            st.caption("🟢 *Salida operativa activa*")
+        else:
+            st.caption(f"🕒 *Histórico: {fecha_sel}*")
+    with col_ref2:
+        if st.button("🔄", help="Refrescar salidas desde GitHub (actualización 2:50 PM)"):
+            st.cache_data.clear()
+            st.rerun()
 
 # Cargar datos de la fecha seleccionada
-with st.spinner("Cargando matriz nacional..."):
+with st.spinner(f"Cargando matriz nacional al {fecha_sel}..."):
     try:
         gdf, df_resumen = cargar_datos_fecha(fecha_sel)
     except Exception as err:
         st.error(f"❌ Error al cargar datos para la fecha {fecha_sel}: {err}")
-        st.info("Verifique que los archivos de datos en `data/` se encuentren disponibles.")
+        st.info("Verifique que los archivos de la fecha en `Salidas/` o `data/` se encuentren disponibles.")
         st.stop()
 
 # Departamentos disponibles
@@ -331,8 +356,9 @@ celdas_altas = int(((gdf["prob"] >= 0.40) & (gdf["prob"] < 0.70)).sum())
 max_pp = gdf["pp"].max() if not gdf.empty else 0.0
 
 with col_tit:
-    st.markdown(f"### **UrbanNuna | Monitoreo Nacional de Inundaciones**")
-    st.caption(f"Evaluación operativa al **{fecha_sel}** en grilla PISCO (0.1°) · Enfoque Groundsource AI + Firth Logistic")
+    st.markdown("### **UrbanNuna | Monitoreo Nacional de Inundaciones**")
+    etiqueta_reciente = " · 🟢 **Última Salida Operativa**" if fecha_sel == fechas[0] else " · 🕒 *Histórico*"
+    st.caption(f"Evaluación al **{fecha_sel}**{etiqueta_reciente} · Grilla PISCO (0.1°) · Enfoque Groundsource AI + Firth Logistic")
 
 with col_kpi1:
     st.markdown(f"""
