@@ -435,8 +435,8 @@ leyenda_html = f"""
 """
 st.markdown(leyenda_html, unsafe_allow_html=True)
 
-# ----------------- TABLA DE DETALLE Y EXPORTACIÓN INDECI / COEN -----------------
-with st.expander("📋 **Boletín Ejecutivo: Tabla de Zonas Bajo Alerta & Exportación INDECI / COEN**", expanded=False):
+# ----------------- TABLA DE DETALLE Y EXPORTACIÓN SENAMHI -----------------
+with st.expander("📋 **Boletín Ejecutivo: Tabla de Zonas Bajo Alerta & Exportación SENAMHI**", expanded=False):
     df_export = gdf[gdf["prob"] >= 0.20][
         ["id", "DEPARTAMENTO", "PROVINCIA", "DISTRITO", "prob_pct", "evento_op", "pp", "ant_log", "lat", "lon"]
     ].sort_values(by="prob_pct", ascending=False)

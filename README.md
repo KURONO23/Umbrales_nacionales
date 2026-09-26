@@ -26,7 +26,7 @@ Visor web interactivo de monitoreo e inferencia probabilística de inundaciones 
 4. **Píldoras Macro-Regionales:** Salto rápido en un clic a *Nacional*, *Costa Norte (Piura/Tumbes)*, *Selva / Amazonía* y *Sierra Sur*.
 5. **Diagnóstico Hídrico:** Gráfica interactiva de barras (Altair) que desglosa la **Lluvia de Hoy ($pp$ mm)** frente al **Antecedente Saturante ($ant$ 15 días)**.
 6. **Modo 3D:** Extrusión volumétrica de celdas según probabilidad de inundación con perspectiva angular a 45°.
-7. **Boletín INDECI / COEN:** Tabla interactiva y exportación de alertas a CSV.
+7. **Boletín SENAMHI:** Tabla interactiva y exportación de alertas a CSV.
 
 ---
 
