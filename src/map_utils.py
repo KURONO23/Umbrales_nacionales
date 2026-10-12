@@ -265,8 +265,16 @@ def crear_mapa_pydeck(
         </div>
         """,
         "style": {
+            # deck.gl actualiza left/top en cada movimiento del cursor.  Mantener
+            # estas propiedades explícitas evita que estilos del contenedor de
+            # Streamlit reemplacen el posicionamiento del tooltip.
+            "position": "absolute",
+            "pointerEvents": "none",
+            "zIndex": 1000,
+            "transform": "translate(12px, 12px)",
             "backgroundColor": "transparent",
-            "border": "none"
+            "border": "none",
+            "padding": "0"
         }
     }
 
@@ -282,6 +290,9 @@ def crear_mapa_pydeck(
         layers=layers,
         initial_view_state=view_state,
         map_style=estilo_url,
-        tooltip=tooltip
+        tooltip=tooltip,
+        # Habilita explícitamente el controlador WebGL para que el evento de
+        # puntero y el tooltip compartan el mismo sistema de coordenadas.
+        controller=True,
     )
     return mapa
