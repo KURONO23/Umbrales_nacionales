@@ -413,7 +413,9 @@ mapa_deck = crear_mapa_pydeck(
     modo_3d=modo_3d
 )
 
-st.pydeck_chart(mapa_deck, use_container_width=True)
+# Mantener dimensiones explícitas evita que el iframe de Streamlit escale el
+# canvas WebGL y desplace verticalmente el tooltip de DeckGL.
+st.pydeck_chart(mapa_deck, use_container_width=False, width=1400, height=500)
 
 # ----------------- LEYENDA FLOTANTE GOOGLE FLOOD HUB -----------------
 rios_leyenda = '<div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 14px; height: 3px; background: #00e5ff; display: inline-block;"></span> <span style="color: #00e5ff; font-weight: 600;">Ríos y Quebradas ANA</span></div>' if mostrar_rios else ''
