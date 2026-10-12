@@ -247,17 +247,7 @@ def crear_mapa_pydeck(
     )
 
     tooltip = {
-        "text": "📍 {DISTRITO} · {PROVINCIA}, {DEPARTAMENTO}\nProbabilidad Inundación: {prob_pct}%\nUmbral Operativo: {evento_op}\nLluvia Hoy (pp): {pp} mm\nAntecedente (15d): {ant_log} mm\nCelda #{id} · Coord: {lat}, {lon}",
-        "style": {
-            "color": "#fff",
-            "backgroundColor": "rgba(22, 27, 34, 0.95)",
-            "padding": "12px 16px",
-            "borderRadius": "8px",
-            "boxShadow": "0 6px 20px rgba(0,0,0,0.7)",
-            "border": "1px solid #30363d",
-            "minWidth": "200px",
-            "whiteSpace": "pre-line"
-        }
+        "text": "📍 {DISTRITO} · {PROVINCIA}, {DEPARTAMENTO}\nProbabilidad Inundación: {prob_pct}%\nUmbral Operativo: {evento_op}\nLluvia Hoy (pp): {pp} mm\nAntecedente (15d): {ant_log} mm\nCelda #{id} · Coord: {lat}, {lon}"
     }
 
     # Selección de mapa base
