@@ -5,6 +5,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import altair as alt
 from src.data_loader import obtener_fechas_disponibles, cargar_datos_fecha, cargar_red_hidrica, cargar_departamentos
@@ -413,7 +414,9 @@ mapa_deck = crear_mapa_pydeck(
     modo_3d=modo_3d
 )
 
-st.pydeck_chart(mapa_deck, use_container_width=True)
+# Renderizar DeckGL dentro de un iframe autocontenido. Así el canvas y el
+# elemento tooltip comparten el mismo sistema de coordenadas aun en Cloud.
+components.html(mapa_deck.to_html(as_string=True), height=500, scrolling=False)
 
 # ----------------- LEYENDA FLOTANTE GOOGLE FLOOD HUB -----------------
 rios_leyenda = '<div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 14px; height: 3px; background: #00e5ff; display: inline-block;"></span> <span style="color: #00e5ff; font-weight: 600;">Ríos y Quebradas ANA</span></div>' if mostrar_rios else ''
