@@ -291,8 +291,5 @@ def crear_mapa_pydeck(
         initial_view_state=view_state,
         map_style=estilo_url,
         tooltip=tooltip,
-        # Habilita explícitamente el controlador WebGL para que el evento de
-        # puntero y el tooltip compartan el mismo sistema de coordenadas.
-        controller=True,
     )
     return mapa
