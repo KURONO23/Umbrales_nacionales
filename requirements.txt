@@ -1,6 +1,6 @@
-streamlit
+streamlit==1.39.0
 geopandas
-pydeck
+pydeck==0.9.1
 pyogrio
 pandas
 shapely
