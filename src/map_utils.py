@@ -265,16 +265,8 @@ def crear_mapa_pydeck(
         </div>
         """,
         "style": {
-            # deck.gl actualiza left/top en cada movimiento del cursor.  Mantener
-            # estas propiedades explícitas evita que estilos del contenedor de
-            # Streamlit reemplacen el posicionamiento del tooltip.
-            "position": "absolute",
-            "pointerEvents": "none",
-            "zIndex": 1000,
-            "transform": "translate(12px, 12px)",
             "backgroundColor": "transparent",
-            "border": "none",
-            "padding": "0"
+            "border": "none"
         }
     }
 
