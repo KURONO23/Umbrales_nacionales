@@ -413,7 +413,15 @@ mapa_deck = crear_mapa_pydeck(
     modo_3d=modo_3d
 )
 
-st.pydeck_chart(mapa_deck, use_container_width=True)
+# El tooltip de DeckGL sigue activo, pero el gráfico no se registra como
+# widget de selección de Streamlit. Esto evita que un clic en una celda fuerce
+# un rerun del iframe y desincronice las coordenadas del tooltip.
+st.pydeck_chart(
+    mapa_deck,
+    use_container_width=True,
+    selection_mode=(),
+    on_select="ignore",
+)
 
 # ----------------- LEYENDA FLOTANTE GOOGLE FLOOD HUB -----------------
 rios_leyenda = '<div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 14px; height: 3px; background: #00e5ff; display: inline-block;"></span> <span style="color: #00e5ff; font-weight: 600;">Ríos y Quebradas ANA</span></div>' if mostrar_rios else ''
