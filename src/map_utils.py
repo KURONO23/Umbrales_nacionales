@@ -247,26 +247,16 @@ def crear_mapa_pydeck(
     )
 
     tooltip = {
-        "html": """
-        <div style="font-family: sans-serif; font-size: 13px; color: #fff; background-color: rgba(22, 27, 34, 0.95); backdrop-filter: blur(8px); padding: 12px 16px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.7); border: 1px solid #30363d; min-width: 200px;">
-            <div style="font-size: 14px; font-weight: 700; margin-bottom: 2px; color: #58a6ff;">
-                📍 {DISTRITO}
-            </div>
-            <div style="font-size: 11px; color: #8b949e; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                {PROVINCIA}, {DEPARTAMENTO}
-            </div>
-            <div style="margin-bottom: 4px;"><b>Probabilidad Inundación:</b> <span style="color: #f2cc60; font-size: 14px; font-weight: 700;">{prob_pct}%</span></div>
-            <div style="margin-bottom: 3px;"><b>Umbral Operativo:</b> {evento_op}</div>
-            <div style="margin-bottom: 3px;"><b>Lluvia Hoy (pp):</b> {pp} mm</div>
-            <div style="margin-bottom: 3px;"><b>Antecedente (15d):</b> {ant_log} mm</div>
-            <div style="color: #6e7681; font-size: 10px; margin-top: 6px; border-top: 1px solid #30363d; padding-top: 4px;">
-                Celda #{id} · Coord: {lat}, {lon}
-            </div>
-        </div>
-        """,
+        "text": "📍 {DISTRITO} · {PROVINCIA}, {DEPARTAMENTO}\nProbabilidad Inundación: {prob_pct}%\nUmbral Operativo: {evento_op}\nLluvia Hoy (pp): {pp} mm\nAntecedente (15d): {ant_log} mm\nCelda #{id} · Coord: {lat}, {lon}",
         "style": {
-            "backgroundColor": "transparent",
-            "border": "none"
+            "color": "#fff",
+            "backgroundColor": "rgba(22, 27, 34, 0.95)",
+            "padding": "12px 16px",
+            "borderRadius": "8px",
+            "boxShadow": "0 6px 20px rgba(0,0,0,0.7)",
+            "border": "1px solid #30363d",
+            "minWidth": "200px",
+            "whiteSpace": "pre-line"
         }
     }
 
