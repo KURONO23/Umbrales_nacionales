@@ -183,8 +183,7 @@ def render_contenido_acerca_de():
     st.markdown("##### 👥 **Autores**")
     st.markdown("""
     **Andrés Goyburo Peña, Eder Pineda Yaros, Max Gutiérrez Reynaga, Waldo Sven Lavado Casimiro**  
-    *SENAMHI — Servicio Nacional de Meteorología e Hidrología del Perú*  
-    *Universidad Nacional Mayor de San Marcos (UNMSM)*
+    *SENAMHI — Servicio Nacional de Meteorología e Hidrología del Perú*
     """)
     st.markdown("---")
     if st.button("Comenzar a Explorar 🚀", use_container_width=True, type="primary"):
@@ -210,14 +209,8 @@ if "acerca_de_mostrado" not in st.session_state:
 
 # ----------------- SIDEBAR: CONTROLES ESTILO GOOGLE FLOOD HUB -----------------
 with st.sidebar:
-    col_sb_tit, col_sb_btn = st.columns([2.5, 1.5])
-    with col_sb_tit:
-        st.markdown("### 🌊 **ARES NACIONAL**")
-        st.caption("SENAMHI Perú")
-    with col_sb_btn:
-        st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-        if st.button("ℹ️ Acerca de", key="btn_sb_acerca", use_container_width=True):
-            modal_acerca_de()
+    st.markdown("### 🌊 **ARES NACIONAL**")
+    st.caption("Dirección de Hidrología — SENAMHI Perú")
     st.markdown("---")
     
     fechas = obtener_fechas_disponibles()
@@ -309,6 +302,10 @@ with st.sidebar:
         index=0
     )
     
+    st.markdown("---")
+    if st.button("ℹ️ Acerca de ARES Nacional", key="btn_sb_acerca", use_container_width=True, help="Conoce los fundamentos metodológicos, fuentes de datos y autores"):
+        modal_acerca_de()
+    
 # Parámetros por defecto para el renderizado del mapa
 mostrar_rios = True
 mostrar_dept = True
@@ -381,8 +378,8 @@ else:
 
 # ----------------- FICHA TÉCNICA DE ZONA EN SIDEBAR (GOOGLE FLOOD HUB CARD) -----------------
 with st.sidebar:
-    st.markdown("---")
     if punto_foco:
+        st.markdown("---")
         fila_f = gdf[gdf["DISTRITO"] == dist_sel].sort_values(by="prob", ascending=False).iloc[0]
         prob_pct = float(fila_f["prob_pct"])
         prob_corte_pct = float(fila_f["prob_corte_pct"])
