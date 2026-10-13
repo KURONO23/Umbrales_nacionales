@@ -1,5 +1,7 @@
 import os
 import sys
+import base64
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
@@ -11,12 +13,25 @@ import altair as alt
 from src.data_loader import obtener_fechas_disponibles, cargar_datos_fecha, cargar_red_hidrica, cargar_departamentos
 from src.map_utils import preparar_features_geojson, preparar_features_puntos, crear_mapa_pydeck
 
+logo_path_local = os.path.join(BASE_DIR, "img", "ares_logo.png")
+icon_page = logo_path_local if os.path.exists(logo_path_local) else "🌊"
+
 st.set_page_config(
     page_title="ARES Nacional - SENAMHI | Monitoreo y Pronóstico de Inundaciones Urbanas",
-    page_icon="🌊",
+    page_icon=icon_page,
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+def obtener_logo_base64():
+    """Retorna el logo corporativo en base64 para renderizado HTML directo de alto rendimiento."""
+    if os.path.exists(logo_path_local):
+        try:
+            with open(logo_path_local, "rb") as f:
+                return base64.b64encode(f.read()).decode("utf-8")
+        except Exception:
+            return None
+    return None
 
 # Inyección de CSS para look & feel ejecutivo estilo Google Flood Hub
 st.markdown("""
@@ -209,8 +224,18 @@ if "acerca_de_mostrado" not in st.session_state:
 
 # ----------------- SIDEBAR: CONTROLES ESTILO GOOGLE FLOOD HUB -----------------
 with st.sidebar:
-    st.markdown("### 🌊 **ARES NACIONAL**")
-    st.caption("Dirección de Hidrología — SENAMHI Perú")
+    logo_b64 = obtener_logo_base64()
+    if logo_b64:
+        st.markdown(f"""
+        <div style="text-align: center; margin-top: -15px; margin-bottom: 12px;">
+            <img src="data:image/png;base64,{logo_b64}" style="width: 88px; height: 88px; border-radius: 50%; box-shadow: 0 4px 16px rgba(0, 229, 255, 0.25); border: 2px solid #30363d; object-fit: cover; display: inline-block;">
+            <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin-top: 8px; letter-spacing: 0.5px;">ARES NACIONAL</div>
+            <div style="font-size: 0.76rem; color: #8b949e; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin-top: 2px;">Dirección de Hidrología — SENAMHI Perú</div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("### 🌊 **ARES NACIONAL**")
+        st.caption("Dirección de Hidrología — SENAMHI Perú")
     st.markdown("---")
     
     fechas = obtener_fechas_disponibles()
