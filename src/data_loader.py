@@ -10,16 +10,14 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 
 def obtener_directorios_salida():
     """
-    Retorna la lista de rutas candidatas donde residen las salidas operativas del modelo.
-    Prioridad: Salidas (actualizada a las 2:50 PM), luego data (respaldo).
+    Retorna la lista de rutas donde residen las salidas operativas del modelo.
+    Prioridad exclusiva: Salidas/ (actualizada automáticamente a las 2:50 PM).
     Soporta variaciones de mayúsculas/minúsculas para Linux.
     """
     candidatos = [
         os.path.join(BASE_DIR, "Salidas"),
         os.path.join(BASE_DIR, "SALIDAS"),
         os.path.join(BASE_DIR, "salidas"),
-        os.path.join(BASE_DIR, "data"),
-        os.path.join(BASE_DIR, "DATA"),
     ]
     directorios = []
     vistos = set()
@@ -28,6 +26,13 @@ def obtener_directorios_salida():
         if os.path.isdir(ruta) and ruta_norm not in vistos:
             vistos.add(ruta_norm)
             directorios.append(ruta)
+            
+    # Solo si la carpeta Salidas no existiera, fallback defensivo a data/
+    if not directorios:
+        fallback_data = os.path.join(BASE_DIR, "data")
+        if os.path.isdir(fallback_data):
+            directorios.append(fallback_data)
+            
     return directorios
 
 def buscar_archivo_salida(nombre_archivo: str):
