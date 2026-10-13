@@ -198,19 +198,11 @@ with st.sidebar:
         index=0
     )
     
-    st.markdown("---")
-    st.markdown("#### 🌊 **Capas Territoriales e Hidrológicas**")
-    mostrar_rios = st.checkbox("Mostrar Red de Ríos y Quebradas (ANA)", value=True)
-    mostrar_dept = st.checkbox("Mostrar Límites Departamentales", value=True)
-    modo_3d = st.toggle("🏢 Modo 3D (Extrusión por Riesgo)", value=False)
-    
-    st.markdown("---")
-    st.markdown("#### 🗺️ **Estilo del Mapa Base**")
-    estilo_mapa_sel = st.selectbox(
-        "Mapa:",
-        options=["Oscuro", "Topográfico / Terreno", "Claro"],
-        index=0
-    )
+# Parámetros por defecto para el renderizado del mapa
+mostrar_rios = True
+mostrar_dept = True
+modo_3d = False
+estilo_mapa_sel = "Oscuro"
 
 # ----------------- GESTIÓN DE BOTONES REGIONALES (SESSION STATE) -----------------
 if "reg_foco" not in st.session_state:
@@ -314,23 +306,6 @@ with st.sidebar:
         ).properties(height=95)
         st.caption("💧 **Diagnóstico Hídrico de Saturación:**")
         st.altair_chart(chart_diag, use_container_width=True)
-        
-    with st.expander("🚨 **Top 5 Zonas Críticas Nacionales**", expanded=(punto_foco is None)):
-        top_5 = gdf.sort_values(by="prob", ascending=False).head(5)
-        for _, fila in top_5.iterrows():
-            prob_val = fila['prob'] * 100.0
-            color_badge = "#f85149" if prob_val >= 70 else ("#ff9800" if prob_val >= 40 else "#f2cc60")
-            alerta_txt = "🔴 Alerta Activa" if fila['evento_op'] == 1 else "🟡 Precaución"
-            st.markdown(f"""
-            <div class="top-card">
-                <div class="top-title">📍 {fila['DISTRITO']}</div>
-                <div style="font-size: 0.72rem; color: #58a6ff; margin-bottom: 3px;">{fila['PROVINCIA']}, {fila['DEPARTAMENTO']}</div>
-                <div class="top-sub">
-                    Prob: <b style="color: {color_badge};">{prob_val:.1f}%</b> · Lluvia: <b>{fila['pp']:.1f} mm</b>
-                    <br>{alerta_txt} · Ant: {fila['ant_log']:.1f} mm
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
 
 # ----------------- ENCABEZADO Y KPIS EJECUTIVOS -----------------
 col_tit, col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns([2.5, 1, 1, 1, 1])
