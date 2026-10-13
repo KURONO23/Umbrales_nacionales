@@ -496,7 +496,7 @@ with st.sidebar:
         st.altair_chart(chart_diag, use_container_width=True)
 
 # ----------------- ENCABEZADO Y KPIS EJECUTIVOS -----------------
-col_tit, col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5, col_btn_acerca = st.columns([1.8, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85])
+col_tit, col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5 = st.columns([1.5, 1, 1, 1, 1, 1])
 
 celdas_doble = int(gdf["doble_alerta"].sum())
 celdas_youden = int(gdf["supera_corte_log"].sum())
@@ -505,13 +505,17 @@ celdas_criticas = int((gdf["prob"] >= 0.70).sum())
 max_pp = gdf["pp"].max() if not gdf.empty else 0.0
 
 with col_tit:
-    st.markdown("### **ARES NACIONAL**")
-    st.caption(f"Sistem**A** de Monito**R**eo y Pronóstico Fr**E**nte a Inundacione**S** Urbanas — Evaluación operativa al **{fecha_sel}** (Grilla PISCO 0.1° · Groundsource AI)")
+    st.markdown("""
+    <div style="padding-top: 4px;">
+        <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; line-height: 1.2;">ARES NACIONAL</div>
+        <div style="font-size: 0.68rem; color: #8b949e; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-top: 4px;">DIRECCIÓN DE HIDROLOGÍA — SENAMHI PERÚ</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col_kpi1:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">⚡ Doble Alerta</div>
+        <div class="metric-title">⚡ DOBLE ALERTA</div>
         <div class="metric-value" style="color: #ff0055;">{celdas_doble}</div>
     </div>
     """, unsafe_allow_html=True)
@@ -519,7 +523,7 @@ with col_kpi1:
 with col_kpi2:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">🎯 Corte Youden</div>
+        <div class="metric-title">🎯 CORTE YOUDEN</div>
         <div class="metric-value" style="color: #e040fb;">{celdas_youden}</div>
     </div>
     """, unsafe_allow_html=True)
@@ -527,31 +531,26 @@ with col_kpi2:
 with col_kpi3:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">🌊 Alerta Op (Iop)</div>
-        <div class="metric-value" style="color: #f85149;">{celdas_en_alerta_op}</div>
+        <div class="metric-title">🌊 ALERTA OP (IOP)</div>
+        <div class="metric-value" style="color: #ff5252;">{celdas_en_alerta_op}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with col_kpi4:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">🔴 Crítico (≥70%)</div>
-        <div class="metric-value" style="color: #ff9800;">{celdas_criticas}</div>
+        <div class="metric-title">🔴 CRÍTICO (≥70%)</div>
+        <div class="metric-value" style="color: #f2cc60;">{celdas_criticas}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with col_kpi5:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">Lluvia Máx 24h</div>
-        <div class="metric-value" style="color: #58a6ff;">{max_pp:.1f} <span style="font-size: 0.85rem;">mm</span></div>
+        <div class="metric-title">LLUVIA MÁX 24H</div>
+        <div class="metric-value" style="color: #58a6ff;">{max_pp:.1f} <span style="font-size: 0.82rem; font-weight: normal;">mm</span></div>
     </div>
     """, unsafe_allow_html=True)
-
-with col_btn_acerca:
-    st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-    if st.button("ℹ️ Acerca de", key="btn_head_acerca", use_container_width=True, help="Información metodológica, fuentes y autores"):
-        modal_acerca_de()
 
 # ----------------- PÍLDORAS DE SALTO RÁPIDO A REGIONES VULNERABLES -----------------
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
