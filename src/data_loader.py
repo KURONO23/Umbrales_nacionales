@@ -105,14 +105,106 @@ def cargar_datos_fecha(fecha: str):
     # Calcular centroides para Tooltip y capas puntuales rápidas
     gdf["lon"] = gdf.geometry.centroid.x.round(4)
     gdf["lat"] = gdf.geometry.centroid.y.round(4)
-    
-    # Limpiar y formatear métricas
+    gdf["id_num"] = gdf["id"].astype(float).astype(int)
+
+    # Cargar CSV resumen si existe para métricas tabulares completas del estudio
+    df_resumen = None
+    if csv_path and os.path.exists(csv_path):
+        try:
+            df_resumen = pd.read_csv(csv_path)
+            df_resumen["id_num"] = df_resumen["ciudad"].astype(float).astype(int)
+            cols_resumen = [c for c in ["id_num", "prob_corte", "umbral_op", "Iop", "ant_op", "evento_log"] if c in df_resumen.columns]
+            gdf = gdf.merge(df_resumen[cols_resumen], on="id_num", how="left", suffixes=("", "_csv"))
+            for c_dup in ["Iop", "ant_op", "evento_log"]:
+                if f"{c_dup}_csv" in gdf.columns:
+                    gdf[c_dup] = gdf[c_dup].combine_first(gdf[f"{c_dup}_csv"])
+                    gdf.drop(columns=[f"{c_dup}_csv"], inplace=True)
+        except Exception:
+            pass
+
+    # Integrar metadatos de calibración por celda (cuadro_ciudad.csv)
+    calib_path = buscar_archivo_estatico("cuadro_ciudad.csv")
+    if calib_path and os.path.exists(calib_path):
+        try:
+            df_calib = pd.read_csv(calib_path)
+            df_calib["id_num"] = df_calib["ciudad"].astype(float).astype(int)
+            cols_calib = [c for c in ["id_num", "mejor_ventana_op", "mejor_ventana_log", "auc_log", "mcc_op", "prob_corte", "umbral_op", "modelo_origen", "dist_modelo_vecino_km"] if c in df_calib.columns]
+            gdf = gdf.merge(df_calib[cols_calib], on="id_num", how="left", suffixes=("", "_calib"))
+            if "prob_corte_calib" in gdf.columns:
+                if "prob_corte" not in gdf.columns or gdf["prob_corte"].isnull().all():
+                    gdf["prob_corte"] = gdf["prob_corte_calib"]
+                else:
+                    gdf["prob_corte"] = gdf["prob_corte"].combine_first(gdf["prob_corte_calib"])
+                gdf.drop(columns=["prob_corte_calib"], inplace=True)
+            if "umbral_op_calib" in gdf.columns:
+                if "umbral_op" not in gdf.columns or gdf["umbral_op"].isnull().all():
+                    gdf["umbral_op"] = gdf["umbral_op_calib"]
+                else:
+                    gdf["umbral_op"] = gdf["umbral_op"].combine_first(gdf["umbral_op_calib"])
+                gdf.drop(columns=["umbral_op_calib"], inplace=True)
+        except Exception:
+            pass
+
+    # Limpiar y formatear métricas del modelo
     gdf["prob_pct"] = (gdf["prob"] * 100).round(1)
+    if "prob_corte" in gdf.columns:
+        gdf["prob_corte"] = gdf["prob_corte"].fillna(0.20)
+        gdf["prob_corte_pct"] = (gdf["prob_corte"] * 100).round(1)
+    else:
+        gdf["prob_corte"] = 0.20
+        gdf["prob_corte_pct"] = 20.0
+
     gdf["pp"] = gdf["pp"].fillna(0.0).round(1)
     gdf["ant_log"] = gdf["ant_log"].fillna(0.0).round(1)
+    if "ant_op" in gdf.columns:
+        gdf["ant_op"] = gdf["ant_op"].fillna(0.0).round(1)
+    else:
+        gdf["ant_op"] = gdf["ant_log"]
+
+    if "Iop" in gdf.columns:
+        gdf["Iop"] = gdf["Iop"].fillna(gdf["pp"] + gdf["ant_op"]).round(1)
+    else:
+        gdf["Iop"] = (gdf["pp"] + gdf["ant_op"]).round(1)
+
+    if "umbral_op" in gdf.columns:
+        gdf["umbral_op"] = gdf["umbral_op"].fillna(50.0).round(1)
+    else:
+        gdf["umbral_op"] = 50.0
+
     gdf["evento_op"] = gdf["evento_op"].fillna(0).astype(int)
     gdf["evento_log"] = gdf["evento_log"].fillna(0).astype(int)
-    
+
+    # Indicador de superación de corte probabilístico calibrado (Youden)
+    gdf["supera_corte_log"] = (gdf["prob"] >= gdf["prob_corte"]).astype(int)
+    # Doble Alerta: activa cuando AMBOS modelos superan su condición crítica
+    gdf["doble_alerta"] = ((gdf["supera_corte_log"] == 1) & (gdf["evento_op"] == 1)).astype(int)
+
+    # Metadatos descriptivos de calibración
+    if "modelo_origen" not in gdf.columns:
+        gdf["modelo_origen"] = "propio"
+    else:
+        gdf["modelo_origen"] = gdf["modelo_origen"].fillna("propio")
+
+    if "mejor_ventana_log" not in gdf.columns:
+        gdf["mejor_ventana_log"] = 15
+    else:
+        gdf["mejor_ventana_log"] = gdf["mejor_ventana_log"].fillna(15).astype(int)
+
+    if "mejor_ventana_op" not in gdf.columns:
+        gdf["mejor_ventana_op"] = 15
+    else:
+        gdf["mejor_ventana_op"] = gdf["mejor_ventana_op"].fillna(15).astype(int)
+
+    if "auc_log" in gdf.columns:
+        gdf["auc_log"] = gdf["auc_log"].round(3)
+    else:
+        gdf["auc_log"] = 0.890
+
+    if "dist_modelo_vecino_km" in gdf.columns:
+        gdf["dist_modelo_vecino_km"] = gdf["dist_modelo_vecino_km"].fillna(0.0).round(1)
+    else:
+        gdf["dist_modelo_vecino_km"] = 0.0
+
     # Integrar información de Ubigeo (Departamento, Provincia, Distrito)
     ubigeo_path = buscar_archivo_estatico("celdas_ubigeo.csv")
     if ubigeo_path and os.path.exists(ubigeo_path):
@@ -127,11 +219,6 @@ def cargar_datos_fecha(fecha: str):
         gdf["PROVINCIA"] = "N/D"
         gdf["DISTRITO"] = "N/D"
 
-    # Cargar CSV resumen si existe para métricas tabulares rápidas
-    df_resumen = None
-    if csv_path and os.path.exists(csv_path):
-        df_resumen = pd.read_csv(csv_path)
-        
     return gdf, df_resumen
 
 @st.cache_data(show_spinner=False)

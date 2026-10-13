@@ -113,6 +113,25 @@ st.markdown("""
         font-size: 0.75rem;
         font-weight: 600;
     }
+    .badge-youden {
+        background: rgba(224, 64, 251, 0.2);
+        color: #e040fb;
+        border: 1px solid #e040fb;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+    .badge-dual {
+        background: rgba(255, 0, 85, 0.25);
+        color: #ff0055;
+        border: 1px solid #ff0055;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        box-shadow: 0 0 8px rgba(255, 0, 85, 0.4);
+    }
     .top-card {
         background: #161b22;
         border: 1px solid #30363d;
@@ -177,8 +196,9 @@ with st.sidebar:
         distritos_disponibles = sorted([d for d in gdf_dept["DISTRITO"].unique() if d not in ["Sin Datos", "N/D"]])
     else:
         gdf_dept = gdf
-        # Distritos con mayor probabilidad para sugerencia rápida
-        distritos_disponibles = sorted(gdf[gdf["prob"] >= 0.20]["DISTRITO"].unique().tolist())
+        # Distritos con alerta activa para sugerencia rápida
+        filtro_sug = (gdf["prob"] >= 0.20) | (gdf["supera_corte_log"] == 1) | (gdf["evento_op"] == 1)
+        distritos_disponibles = sorted(gdf[filtro_sug]["DISTRITO"].unique().tolist())
         
     opciones_dist = ["(Nacional / Sin selección)"] + distritos_disponibles
     dist_sel = st.selectbox("Distrito / Zona:", options=opciones_dist, index=0)
@@ -190,10 +210,12 @@ with st.sidebar:
         "Nivel de Alerta:",
         options=[
             "Todas las Celdas",
+            "🎯 Supera Corte Youden (prob ≥ prob_corte)",
+            "🚨 Alerta Operativa (Iop ≥ Umbral)",
+            "⚡ Doble Alerta (Logística + Operativa)",
             "🔴 Crítico (Prob ≥ 70%)",
             "🟠 Alto (Prob 40-70%)",
-            "🟡 Moderado (Prob 20-40%)",
-            "🚨 Alertas Operativas (Umbral = 1)"
+            "🟡 Moderado (Prob 20-40%)"
         ],
         index=0
     )
@@ -215,18 +237,27 @@ gdf_filtrado = gdf.copy()
 if dept_sel != "Todos los Departamentos":
     gdf_filtrado = gdf_filtrado[gdf_filtrado["DEPARTAMENTO"] == dept_sel]
 
-# Filtro por severidad
-if severidad_sel == "🔴 Crítico (Prob ≥ 70%)":
+# Filtro por severidad y modo visual para PyDeck
+if severidad_sel == "🎯 Supera Corte Youden (prob ≥ prob_corte)":
+    gdf_filtrado = gdf_filtrado[gdf_filtrado["supera_corte_log"] == 1]
+    modo_clave = "corte"
+elif severidad_sel == "🚨 Alerta Operativa (Iop ≥ Umbral)":
+    gdf_filtrado = gdf_filtrado[gdf_filtrado["evento_op"] == 1]
+    modo_clave = "op"
+elif severidad_sel == "⚡ Doble Alerta (Logística + Operativa)":
+    gdf_filtrado = gdf_filtrado[gdf_filtrado["doble_alerta"] == 1]
+    modo_clave = "dual"
+elif severidad_sel == "🔴 Crítico (Prob ≥ 70%)":
     gdf_filtrado = gdf_filtrado[gdf_filtrado["prob"] >= 0.70]
+    modo_clave = "prob"
 elif severidad_sel == "🟠 Alto (Prob 40-70%)":
     gdf_filtrado = gdf_filtrado[(gdf_filtrado["prob"] >= 0.40) & (gdf_filtrado["prob"] < 0.70)]
+    modo_clave = "prob"
 elif severidad_sel == "🟡 Moderado (Prob 20-40%)":
     gdf_filtrado = gdf_filtrado[(gdf_filtrado["prob"] >= 0.20) & (gdf_filtrado["prob"] < 0.40)]
-elif severidad_sel == "🚨 Alertas Operativas (Umbral = 1)":
-    gdf_filtrado = gdf_filtrado[gdf_filtrado["evento_op"] == 1]
-
-# Modo de visualización para capas de mapa
-modo_clave = "op" if "Operativas" in severidad_sel else "prob"
+    modo_clave = "prob"
+else:
+    modo_clave = "prob"
 
 # Determinar centro y zoom dinámico del mapa (Fly-To)
 centro_lat = -9.19
@@ -264,8 +295,25 @@ with st.sidebar:
     st.markdown("---")
     if punto_foco:
         fila_f = gdf[gdf["DISTRITO"] == dist_sel].sort_values(by="prob", ascending=False).iloc[0]
-        prob_pct = fila_f["prob_pct"]
-        if prob_pct >= 70:
+        prob_pct = float(fila_f["prob_pct"])
+        prob_corte_pct = float(fila_f["prob_corte_pct"])
+        supera_corte = int(fila_f["supera_corte_log"])
+        evento_op = int(fila_f["evento_op"])
+        doble = int(fila_f["doble_alerta"])
+        iop_val = float(fila_f["Iop"])
+        umbral_val = float(fila_f["umbral_op"])
+        ventana_d = int(fila_f["mejor_ventana_log"])
+        mod_origen = str(fila_f.get("modelo_origen", "propio"))
+        auc_val = float(fila_f.get("auc_log", 0.890))
+        dist_km = float(fila_f.get("dist_modelo_vecino_km", 0.0))
+
+        if doble == 1:
+            badge_html = '<span class="badge-dual">⚡ DOBLE ALERTA</span>'
+        elif supera_corte == 1:
+            badge_html = '<span class="badge-youden">🎯 ALERTA YOUDEN</span>'
+        elif evento_op == 1:
+            badge_html = '<span class="badge-critical">🚨 ALERTA OP</span>'
+        elif prob_pct >= 70:
             badge_html = '<span class="badge-critical">🔴 CRÍTICO</span>'
         elif prob_pct >= 40:
             badge_html = '<span class="badge-high">🟠 ALTO</span>'
@@ -273,46 +321,76 @@ with st.sidebar:
             badge_html = '<span class="badge-mod">🟡 MODERADO</span>'
         else:
             badge_html = '<span class="badge-normal">⚪ NORMAL</span>'
-            
+
+        if mod_origen.lower() == "propio":
+            origen_badge = f'🔬 Modelo Propio · AUC: {auc_val:.3f}'
+        else:
+            origen_badge = f'📡 Modelo Vecino ({dist_km:.1f} km) · AUC: {auc_val:.3f}'
+
+        pct_bar_prob = min(prob_pct, 100.0)
+        pct_bar_iop = min((iop_val / umbral_val * 100.0) if umbral_val > 0 else 0.0, 100.0)
+
         st.markdown(f"""
         <div class="detail-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                 <div class="detail-title">📍 {fila_f['DISTRITO']}</div>
                 {badge_html}
             </div>
-            <div class="detail-sub">{fila_f['PROVINCIA']}, {fila_f['DEPARTAMENTO']}</div>
-            <div style="margin-bottom: 8px;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 3px;">
-                    <span>Probabilidad Inundación:</span>
-                    <b style="color: #f2cc60;">{prob_pct:.1f}%</b>
+            <div class="detail-sub">{fila_f['PROVINCIA']}, {fila_f['DEPARTAMENTO']} · Celda #{int(fila_f['id'])}</div>
+            
+            <div style="margin-bottom: 10px; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 6px; border: 1px solid #30363d;">
+                <div style="font-size: 0.73rem; color: #8b949e; text-transform: uppercase; font-weight: 600; margin-bottom: 3px;">
+                    📈 Modelo Logístico (Firth)
                 </div>
-                <div style="width: 100%; background: #30363d; height: 8px; border-radius: 4px; overflow: hidden;">
-                    <div style="width: {min(prob_pct, 100)}%; background: {'#f85149' if prob_pct>=70 else ('#ff9800' if prob_pct>=40 else '#f2cc60')}; height: 100%;"></div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 2px;">
+                    <span>Probabilidad: <b style="color: #f2cc60;">{prob_pct:.1f}%</b></span>
+                    <span style="color: #8b949e;">Corte Youden: <b>{prob_corte_pct:.1f}%</b></span>
                 </div>
+                <div style="width: 100%; background: #21262d; height: 6px; border-radius: 3px; overflow: hidden;">
+                    <div style="width: {pct_bar_prob}%; background: {'#e040fb' if supera_corte==1 else ('#ff9800' if prob_pct>=40 else '#f2cc60')}; height: 100%;"></div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 10px; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 6px; border: 1px solid #30363d;">
+                <div style="font-size: 0.73rem; color: #8b949e; text-transform: uppercase; font-weight: 600; margin-bottom: 3px;">
+                    🌊 Modelo Físico-Operativo (Iop)
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 2px;">
+                    <span>Severidad: <b style="color: #58a6ff;">{iop_val:.1f} mm</b></span>
+                    <span style="color: #8b949e;">Umbral Crítico: <b>{umbral_val:.1f} mm</b></span>
+                </div>
+                <div style="width: 100%; background: #21262d; height: 6px; border-radius: 3px; overflow: hidden;">
+                    <div style="width: {pct_bar_iop}%; background: {'#f85149' if evento_op==1 else '#58a6ff'}; height: 100%;"></div>
+                </div>
+            </div>
+
+            <div style="font-size: 0.73rem; color: #8b949e; margin-top: 4px; border-top: 1px solid #21262d; padding-top: 5px;">
+                {origen_badge}
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Mini gráfico de diagnóstico hídrico (Precipitación Hoy vs Antecedente)
+        # Mini gráfico de diagnóstico hídrico (Precipitación Hoy vs Antecedente de la ventana óptima)
         df_diag = pd.DataFrame({
-            "Componente": ["Lluvia Hoy (pp)", "Antecedente (15d)"],
+            "Componente": ["Lluvia Hoy (pp)", f"Antecedente ({ventana_d}d)"],
             "Milimetros": [float(fila_f["pp"]), float(fila_f["ant_log"])]
         })
         chart_diag = alt.Chart(df_diag).mark_bar(cornerRadius=4).encode(
             x=alt.X("Milimetros:Q", title="Milímetros (mm)"),
             y=alt.Y("Componente:N", title=None, sort=None),
-            color=alt.Color("Componente:N", scale=alt.Scale(domain=["Lluvia Hoy (pp)", "Antecedente (15d)"], range=["#58a6ff", "#3fb950"]), legend=None),
+            color=alt.Color("Componente:N", scale=alt.Scale(domain=["Lluvia Hoy (pp)", f"Antecedente ({ventana_d}d)"], range=["#58a6ff", "#3fb950"]), legend=None),
             tooltip=["Componente", "Milimetros"]
         ).properties(height=95)
-        st.caption("💧 **Diagnóstico Hídrico de Saturación:**")
+        st.caption(f"💧 **Diagnóstico Hídrico (Ventana Crítica: {ventana_d} días):**")
         st.altair_chart(chart_diag, use_container_width=True)
 
 # ----------------- ENCABEZADO Y KPIS EJECUTIVOS -----------------
-col_tit, col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns([2.5, 1, 1, 1, 1])
+col_tit, col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5 = st.columns([2.0, 0.9, 0.9, 0.9, 0.9, 0.9])
 
-celdas_en_alerta_op = int((gdf["evento_op"] == 1).sum())
+celdas_doble = int(gdf["doble_alerta"].sum())
+celdas_youden = int(gdf["supera_corte_log"].sum())
+celdas_en_alerta_op = int(gdf["evento_op"].sum())
 celdas_criticas = int((gdf["prob"] >= 0.70).sum())
-celdas_altas = int(((gdf["prob"] >= 0.40) & (gdf["prob"] < 0.70)).sum())
 max_pp = gdf["pp"].max() if not gdf.empty else 0.0
 
 with col_tit:
@@ -322,32 +400,40 @@ with col_tit:
 with col_kpi1:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">Alerta Operativa</div>
-        <div class="metric-value" style="color: #f85149;">{celdas_en_alerta_op}</div>
+        <div class="metric-title">⚡ Doble Alerta</div>
+        <div class="metric-value" style="color: #ff0055;">{celdas_doble}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with col_kpi2:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">🔴 Crítico (≥70%)</div>
-        <div class="metric-value" style="color: #f85149;">{celdas_criticas}</div>
+        <div class="metric-title">🎯 Corte Youden</div>
+        <div class="metric-value" style="color: #e040fb;">{celdas_youden}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with col_kpi3:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">🟠 Alto (40-70%)</div>
-        <div class="metric-value" style="color: #ff9800;">{celdas_altas}</div>
+        <div class="metric-title">🌊 Alerta Op (Iop)</div>
+        <div class="metric-value" style="color: #f85149;">{celdas_en_alerta_op}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with col_kpi4:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">Lluvia Máx (24h)</div>
-        <div class="metric-value" style="color: #58a6ff;">{max_pp:.1f} <span style="font-size: 0.9rem;">mm</span></div>
+        <div class="metric-title">🔴 Crítico (≥70%)</div>
+        <div class="metric-value" style="color: #ff9800;">{celdas_criticas}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col_kpi5:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-title">Lluvia Máx 24h</div>
+        <div class="metric-value" style="color: #58a6ff;">{max_pp:.1f} <span style="font-size: 0.85rem;">mm</span></div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -394,19 +480,22 @@ mapa_deck = crear_mapa_pydeck(
 components.html(mapa_deck.to_html(as_string=True), height=500, scrolling=False)
 
 # ----------------- LEYENDA FLOTANTE GOOGLE FLOOD HUB -----------------
-rios_leyenda = '<div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 14px; height: 3px; background: #00e5ff; display: inline-block;"></span> <span style="color: #00e5ff; font-weight: 600;">Ríos y Quebradas ANA</span></div>' if mostrar_rios else ''
+rios_leyenda = '<div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 14px; height: 3px; background: #00e5ff; display: inline-block;"></span> <span style="color: #00e5ff; font-weight: 600;">Ríos ANA</span></div>' if mostrar_rios else ''
 
 leyenda_html = f"""
 <div style="display: flex; justify-content: flex-end; margin-top: -55px; margin-bottom: 20px; padding-right: 20px; position: relative; z-index: 10;">
     <div style="background: rgba(22, 27, 34, 0.95); backdrop-filter: blur(8px); border: 1px solid #30363d; border-radius: 8px; padding: 10px 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.5); font-family: sans-serif; font-size: 12px;">
-        <div style="color: #8b949e; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Niveles de Alerta Nacional (Google Flood Hub Perú)</div>
-        <div style="display: flex; gap: 14px; align-items: center;">
+        <div style="color: #8b949e; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Niveles de Alerta Nacional (ARES · Estudio de Umbrales SENAMHI)</div>
+        <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgba(200, 200, 200, 0.2); border: 1px solid #555; border-radius: 3px; display: inline-block;"></span> <span style="color: #8b949e;">&lt; 20% Normal</span></div>
-            <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 235, 59); border-radius: 3px; display: inline-block;"></span> <span style="color: #f2cc60;">20 - 40% Moderado</span></div>
-            <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 152, 0); border-radius: 3px; display: inline-block;"></span> <span style="color: #ff9800;">40 - 70% Alto</span></div>
+            <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 235, 59); border-radius: 3px; display: inline-block;"></span> <span style="color: #f2cc60;">20-40% Moderado</span></div>
+            <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 152, 0); border-radius: 3px; display: inline-block;"></span> <span style="color: #ff9800;">40-70% Alto</span></div>
             <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(244, 67, 54); border-radius: 3px; display: inline-block;"></span> <span style="color: #f85149; font-weight: bold;">≥ 70% Crítico</span></div>
+            <div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 12px; height: 12px; background: rgb(224, 64, 251); border-radius: 3px; display: inline-block;"></span> <span style="color: #e040fb; font-weight: bold;">🎯 Corte Youden</span></div>
+            <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 23, 68); border-radius: 3px; display: inline-block;"></span> <span style="color: #ff1744; font-weight: bold;">🚨 Alerta Op (Iop)</span></div>
+            <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 0, 85); border-radius: 3px; display: inline-block; box-shadow: 0 0 6px #ff0055;"></span> <span style="color: #ff0055; font-weight: bold;">⚡ Doble Alerta</span></div>
             {rios_leyenda}
-            <div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #00e5ff; display: inline-block; box-shadow: 0 0 8px #00e5ff;"></span> <span style="color: #00e5ff; font-weight: bold;">Zona Seleccionada</span></div>
+            <div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #00e5ff; display: inline-block; box-shadow: 0 0 8px #00e5ff;"></span> <span style="color: #00e5ff; font-weight: bold;">Foco</span></div>
         </div>
     </div>
 </div>
@@ -415,18 +504,35 @@ st.markdown(leyenda_html, unsafe_allow_html=True)
 
 # ----------------- TABLA DE DETALLE Y EXPORTACIÓN SENAMHI -----------------
 with st.expander("📋 **Boletín Ejecutivo: Tabla de Zonas Bajo Alerta & Exportación SENAMHI**", expanded=False):
-    df_export = gdf[gdf["prob"] >= 0.20][
-        ["id", "DEPARTAMENTO", "PROVINCIA", "DISTRITO", "prob_pct", "evento_op", "pp", "ant_log", "lat", "lon"]
+    # Celdas que presentan al menos una señal de alerta operativa o probabilística
+    filtro_alerta_tabla = (gdf["prob"] >= 0.20) | (gdf["supera_corte_log"] == 1) | (gdf["evento_op"] == 1)
+    df_export = gdf[filtro_alerta_tabla][
+        [
+            "id", "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
+            "prob_pct", "prob_corte_pct", "supera_corte_log",
+            "Iop", "umbral_op", "evento_op", "doble_alerta",
+            "pp", "ant_log", "mejor_ventana_log", "modelo_origen", "auc_log",
+            "lat", "lon"
+        ]
     ].sort_values(by="prob_pct", ascending=False)
     
     st.dataframe(
         df_export.rename(columns={
-            "prob_pct": "Probabilidad (%)",
-            "evento_op": "Alerta Operativa (1/0)",
-            "pp": "Lluvia Hoy (mm)",
-            "ant_log": "Antecedente 15d (mm)",
-            "lat": "Latitud",
-            "lon": "Longitud"
+            "id": "ID Celda",
+            "prob_pct": "Prob (%)",
+            "prob_corte_pct": "Corte Youden (%)",
+            "supera_corte_log": "Alerta Youden",
+            "Iop": "Severidad Iop (mm)",
+            "umbral_op": "Umbral Crítico (mm)",
+            "evento_op": "Alerta Operativa",
+            "doble_alerta": "Doble Alerta",
+            "pp": "Lluvia 24h (mm)",
+            "ant_log": "Antecedente (mm)",
+            "mejor_ventana_log": "Ventana (d)",
+            "modelo_origen": "Modelo",
+            "auc_log": "AUC-ROC",
+            "lat": "Lat",
+            "lon": "Lon"
         }),
         use_container_width=True,
         hide_index=True
@@ -436,7 +542,7 @@ with st.expander("📋 **Boletín Ejecutivo: Tabla de Zonas Bajo Alerta & Export
     with col_exp1:
         csv_data = df_export.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="📥 Descargar Boletín CSV",
+            label="📥 Descargar Boletín CSV Completo",
             data=csv_data,
             file_name=f"boletin_inundaciones_SENAMHI_{fecha_sel}.csv",
             mime="text/csv"

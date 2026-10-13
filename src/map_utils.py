@@ -20,48 +20,85 @@ def obtener_color_probabilidad(prob):
         return [244, 67, 54, 230] # Rojo intenso
 
 def obtener_color_evento_op(evento):
-    """Color binario para el Umbral Operativo: 0=transparente, 1=Rojo neón."""
+    """Color binario para el Umbral Operativo: 1=Rojo neón, 0=transparente."""
     if evento == 1:
-        return [255, 23, 68, 220] # Alerta Sí
+        return [255, 23, 68, 230] # Alerta Sí
     return [150, 150, 150, 25]     # Normal
+
+def obtener_color_corte_log(supera):
+    """Color binario para superación de corte Youden: 1=Violeta neón, 0=transparente."""
+    if supera == 1:
+        return [224, 64, 251, 230] # Violeta / Fucsia alerta
+    return [150, 150, 150, 25]
+
+def obtener_color_dual(doble):
+    """Color binario para Doble Alerta (Logística + Operativa simultánea): 1=Rojo carmesí ultra, 0=transparente."""
+    if doble == 1:
+        return [255, 0, 85, 240] # Rojo carmesí ultra
+    return [150, 150, 150, 25]
 
 def preparar_features_geojson(gdf, modo="prob"):
     """
     Convierte un GeoDataFrame en un GeoJSON con colores RGBA inyectados para PyDeck.
+    Soporta: 'prob' (escala Google Flood Hub), 'op' (umbral operativo), 'corte' (corte Youden) y 'dual' (ambas).
     """
     gdf_copy = gdf.copy()
     
-    if modo == "prob":
-        gdf_copy["fill_color"] = gdf_copy["prob"].apply(obtener_color_probabilidad)
-        gdf_copy["line_color"] = [[0, 0, 0, 40] for _ in range(len(gdf_copy))]
-    else:
+    if modo == "op":
         gdf_copy["fill_color"] = gdf_copy["evento_op"].apply(obtener_color_evento_op)
-        gdf_copy["line_color"] = [[0, 0, 0, 40] for _ in range(len(gdf_copy))]
+    elif modo == "corte":
+        gdf_copy["fill_color"] = gdf_copy["supera_corte_log"].apply(obtener_color_corte_log)
+    elif modo == "dual":
+        gdf_copy["fill_color"] = gdf_copy["doble_alerta"].apply(obtener_color_dual)
+    else:
+        gdf_copy["fill_color"] = gdf_copy["prob"].apply(obtener_color_probabilidad)
         
+    gdf_copy["line_color"] = [[0, 0, 0, 40] for _ in range(len(gdf_copy))]
     return json.loads(gdf_copy.to_json())
 
 def preparar_features_puntos(gdf, modo="prob"):
     """
     Genera una lista de diccionarios para la capa de balizas/pines estilo Google Flood Hub.
-    Solo incluye puntos con alerta (prob >= 20% o evento_op == 1) para alto rendimiento visual.
+    Filtra según el modo seleccionado para garantizar alto rendimiento y máxima relevancia visual.
     """
     if gdf.empty:
         return []
         
-    if modo == "prob":
-        gdf_alerta = gdf[gdf["prob"] >= 0.20].copy()
-    else:
+    if modo == "op":
         gdf_alerta = gdf[gdf["evento_op"] == 1].copy()
+    elif modo == "corte":
+        gdf_alerta = gdf[gdf["supera_corte_log"] == 1].copy()
+    elif modo == "dual":
+        gdf_alerta = gdf[gdf["doble_alerta"] == 1].copy()
+    else:
+        gdf_alerta = gdf[gdf["prob"] >= 0.20].copy()
         
     if gdf_alerta.empty:
         return []
         
     puntos = []
     for _, row in gdf_alerta.iterrows():
-        prob = row["prob"]
-        evento = row["evento_op"]
+        prob = float(row.get("prob", 0.0))
+        evento_op = int(row.get("evento_op", 0))
+        supera_corte = int(row.get("supera_corte_log", 0))
+        doble = int(row.get("doble_alerta", 0))
         
-        if modo == "prob":
+        if modo == "op":
+            color_core = [255, 23, 68, 240]
+            color_halo = [255, 23, 68, 80]
+            radio_core = 4000
+            radio_halo = 10000
+        elif modo == "corte":
+            color_core = [224, 64, 251, 240]
+            color_halo = [224, 64, 251, 80]
+            radio_core = 3800
+            radio_halo = 9500
+        elif modo == "dual":
+            color_core = [255, 0, 85, 250]
+            color_halo = [255, 0, 85, 90]
+            radio_core = 4500
+            radio_halo = 11000
+        else:
             if prob >= 0.70:
                 color_core = [244, 67, 54, 240]
                 color_halo = [244, 67, 54, 80]
@@ -77,24 +114,38 @@ def preparar_features_puntos(gdf, modo="prob"):
                 color_halo = [255, 235, 59, 60]
                 radio_core = 3000
                 radio_halo = 7000
+                
+        alerta_log_txt = "🚨 Supera Corte" if supera_corte == 1 else "Normal"
+        alerta_op_txt = "🚨 Supera Umbral" if evento_op == 1 else "Normal"
+        mod_origen = str(row.get("modelo_origen", "propio"))
+        auc_val = float(row.get("auc_log", 0.89))
+        dist_km = float(row.get("dist_modelo_vecino_km", 0.0))
+        if mod_origen.lower() == "propio":
+            modelo_txt = f"Propio (AUC {auc_val:.3f})"
         else:
-            color_core = [255, 23, 68, 240]
-            color_halo = [255, 23, 68, 80]
-            radio_core = 4000
-            radio_halo = 10000
-            
+            modelo_txt = f"Vecino ({dist_km:.1f} km, AUC {auc_val:.3f})"
+
         puntos.append({
             "coordinates": [float(row["lon"]), float(row["lat"])],
             "lon": float(row["lon"]),
             "lat": float(row["lat"]),
             "id": int(row["id"]),
-            "DISTRITO": str(row["DISTRITO"]),
-            "PROVINCIA": str(row["PROVINCIA"]),
-            "DEPARTAMENTO": str(row["DEPARTAMENTO"]),
-            "prob_pct": float(row["prob_pct"]),
-            "evento_op": int(row["evento_op"]),
-            "pp": float(row["pp"]),
-            "ant_log": float(row["ant_log"]),
+            "DISTRITO": str(row.get("DISTRITO", "N/D")),
+            "PROVINCIA": str(row.get("PROVINCIA", "N/D")),
+            "DEPARTAMENTO": str(row.get("DEPARTAMENTO", "N/D")),
+            "prob_pct": float(row.get("prob_pct", 0.0)),
+            "prob_corte_pct": float(row.get("prob_corte_pct", 20.0)),
+            "alerta_log_txt": alerta_log_txt,
+            "alerta_op_txt": alerta_op_txt,
+            "evento_op": evento_op,
+            "supera_corte_log": supera_corte,
+            "doble_alerta": doble,
+            "pp": float(row.get("pp", 0.0)),
+            "ant_log": float(row.get("ant_log", 0.0)),
+            "Iop": float(row.get("Iop", 0.0)),
+            "umbral_op": float(row.get("umbral_op", 0.0)),
+            "mejor_ventana_log": int(row.get("mejor_ventana_log", 15)),
+            "modelo_origen_txt": modelo_txt,
             "color_core": color_core,
             "color_halo": color_halo,
             "radio_core": radio_core,
@@ -249,18 +300,20 @@ def crear_mapa_pydeck(
     tooltip = {
         "html": """
         <div style="font-family: sans-serif; font-size: 13px; color: #fff; background-color: rgba(22, 27, 34, 0.95);
-        backdrop-filter: blur(8px); padding: 12px 16px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.7); border: 1px solid #30363d; min-width: 200px;">
+        backdrop-filter: blur(8px); padding: 12px 16px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.7); border: 1px solid #30363d; min-width: 230px;">
             <div style="font-size: 14px; font-weight: 700; margin-bottom: 2px; color: #58a6ff;">
                 📍 {DISTRITO}
             </div>
             <div style="font-size: 11px; color: #8b949e; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
                 {PROVINCIA}, {DEPARTAMENTO}
             </div>
-            <div style="margin-bottom: 4px;"><b>Probabilidad Inundación:</b> <span style="color: #f2cc60; font-size: 14px; font-weight: 700;">{prob_pct}%</span></div>
-            <div style="margin-bottom: 3px;"><b>Umbral Operativo:</b> {evento_op}</div>
-            <div style="margin-bottom: 3px;"><b>Lluvia Hoy (pp):</b> {pp} mm</div>
-            <div style="margin-bottom: 3px;"><b>Antecedente (15d):</b> {ant_log} mm</div>
-            <div style="color: #6e7681; font-size: 10px; margin-top: 6px; border-top: 1px solid #30363d; padding-top: 4px;">
+            <div style="margin-bottom: 4px;"><b>Probabilidad:</b> <span style="color: #f2cc60; font-size: 13px; font-weight: 700;">{prob_pct}%</span> <span style="color: #8b949e; font-size: 11px;">(Corte Youden: {prob_corte_pct}%)</span></div>
+            <div style="margin-bottom: 4px;"><b>Severidad Iop:</b> <span style="color: #58a6ff; font-weight: 600;">{Iop} mm</span> <span style="color: #8b949e; font-size: 11px;">(Umbral: {umbral_op} mm)</span></div>
+            <div style="margin-bottom: 3px;"><b>Lluvia 24h:</b> {pp} mm · <b>Antecedente:</b> {ant_log} mm ({mejor_ventana_log}d)</div>
+            <div style="color: #8b949e; font-size: 11px; margin-top: 6px; border-top: 1px solid #30363d; padding-top: 4px;">
+                ⚙️ Modelo: {modelo_origen_txt}
+            </div>
+            <div style="color: #6e7681; font-size: 10px; margin-top: 2px;">
                 Celda #{id} · Coord: {lat}, {lon}
             </div>
         </div>
