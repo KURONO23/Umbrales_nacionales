@@ -37,7 +37,7 @@ def obtener_logo_base64():
 st.markdown("""
 <style>
     .block-container {
-        padding-top: 1.2rem !important;
+        padding-top: 4.2rem !important;
         padding-bottom: 1.5rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
