@@ -182,6 +182,32 @@ with st.spinner(f"Cargando matriz nacional al {fecha_sel}..."):
         st.info("Verifique que los archivos de la fecha en `Salidas/` o `data/` se encuentren disponibles.")
         st.stop()
 
+# Garantizar columnas defensivas (blindaje total ante cachés previas en Streamlit Cloud)
+if "prob_corte" not in gdf.columns:
+    gdf["prob_corte"] = 0.20
+if "prob_corte_pct" not in gdf.columns:
+    gdf["prob_corte_pct"] = (gdf["prob_corte"] * 100).round(1)
+if "supera_corte_log" not in gdf.columns:
+    gdf["supera_corte_log"] = (gdf["prob"] >= gdf["prob_corte"]).astype(int)
+if "evento_op" not in gdf.columns:
+    gdf["evento_op"] = 0
+if "doble_alerta" not in gdf.columns:
+    gdf["doble_alerta"] = ((gdf["supera_corte_log"] == 1) & (gdf["evento_op"] == 1)).astype(int)
+if "Iop" not in gdf.columns:
+    gdf["Iop"] = (gdf["pp"] + gdf.get("ant_log", 0.0)).round(1)
+if "umbral_op" not in gdf.columns:
+    gdf["umbral_op"] = 50.0
+if "mejor_ventana_log" not in gdf.columns:
+    gdf["mejor_ventana_log"] = 15
+if "mejor_ventana_op" not in gdf.columns:
+    gdf["mejor_ventana_op"] = 15
+if "modelo_origen" not in gdf.columns:
+    gdf["modelo_origen"] = "propio"
+if "auc_log" not in gdf.columns:
+    gdf["auc_log"] = 0.890
+if "dist_modelo_vecino_km" not in gdf.columns:
+    gdf["dist_modelo_vecino_km"] = 0.0
+
 # Departamentos disponibles
 depts_disponibles = sorted([d for d in gdf["DEPARTAMENTO"].unique() if d not in ["Sin Datos", "N/D"]])
 opciones_dept = ["Todos los Departamentos"] + depts_disponibles

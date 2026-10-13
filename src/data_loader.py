@@ -79,9 +79,10 @@ def obtener_fechas_disponibles():
     return lista_fechas
 
 @st.cache_data(ttl=300, show_spinner=False)
-def cargar_datos_fecha(fecha: str):
+def cargar_datos_fecha(fecha: str, cache_version: str = "v2_20261013"):
     """
     Carga el GeoPackage y el CSV de la fecha dada desde la carpeta Salidas (o data).
+    cache_version invalida automáticamente la caché anterior de Streamlit Cloud.
     """
     gpkg_path = buscar_archivo_salida(f"grillaPISCO_prob_{fecha}.gpkg")
     csv_path = buscar_archivo_salida(f"resumen_prob_grillaPISCO_{fecha}.csv")
