@@ -12,7 +12,7 @@ from src.data_loader import obtener_fechas_disponibles, cargar_datos_fecha, carg
 from src.map_utils import preparar_features_geojson, preparar_features_puntos, crear_mapa_pydeck
 
 st.set_page_config(
-    page_title="UrbanNuna - SENAMHI | Monitoreo Nacional de Inundaciones",
+    page_title="ARES Nacional - SENAMHI | Monitoreo y Pronóstico de Inundaciones Urbanas",
     page_icon="🌊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -134,7 +134,7 @@ st.markdown("""
 
 # ----------------- SIDEBAR: CONTROLES ESTILO GOOGLE FLOOD HUB -----------------
 with st.sidebar:
-    st.markdown("### 🌊 **UrbanNuna**")
+    st.markdown("### 🌊 **ARES NACIONAL**")
     st.caption("Dirección de Hidrología — SENAMHI Perú")
     st.markdown("---")
     
@@ -316,8 +316,8 @@ celdas_altas = int(((gdf["prob"] >= 0.40) & (gdf["prob"] < 0.70)).sum())
 max_pp = gdf["pp"].max() if not gdf.empty else 0.0
 
 with col_tit:
-    st.markdown("### **UrbanNuna | Monitoreo Nacional de Inundaciones**")
-    st.caption(f"Evaluación operativa al **{fecha_sel}** en grilla PISCO (0.1°) · Enfoque Groundsource AI + Firth Logistic")
+    st.markdown("### **ARES NACIONAL**")
+    st.caption(f"Sistem**A** de Monito**R**eo y Pronóstico Fr**E**nte a Inundacione**S** Urbanas — Evaluación operativa al **{fecha_sel}** (Grilla PISCO 0.1° · Groundsource AI)")
 
 with col_kpi1:
     st.markdown(f"""

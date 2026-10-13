@@ -1,4 +1,4 @@
-# UrbanNuna | Sistema de Monitoreo Nacional de Inundaciones Urbanas (SENAMHI)
+# ARES NACIONAL | Sistema de Monitoreo y Pronóstico Frente a Inundaciones Urbanas (SENAMHI)
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://aresnacional.streamlit.app)
 [![Institución](https://img.shields.io/badge/SENAMHI-Direcci%C3%B3n%20de%20Hidrolog%C3%ADa-blue)](https://www.senamhi.gob.pe)
