@@ -37,7 +37,7 @@ def obtener_logo_base64():
 st.markdown("""
 <style>
     .block-container {
-        padding-top: 2.2rem !important;
+        padding-top: 1.2rem !important;
         padding-bottom: 1.5rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
@@ -224,18 +224,12 @@ if "acerca_de_mostrado" not in st.session_state:
 
 # ----------------- SIDEBAR: CONTROLES ESTILO GOOGLE FLOOD HUB -----------------
 with st.sidebar:
-    logo_b64 = obtener_logo_base64()
-    if logo_b64:
-        st.markdown(f"""
-        <div style="text-align: center; margin-top: -15px; margin-bottom: 12px;">
-            <img src="data:image/png;base64,{logo_b64}" style="width: 88px; height: 88px; border-radius: 50%; box-shadow: 0 4px 16px rgba(0, 229, 255, 0.25); border: 2px solid #30363d; object-fit: cover; display: inline-block;">
-            <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin-top: 8px; letter-spacing: 0.5px;">ARES NACIONAL</div>
-            <div style="font-size: 0.76rem; color: #8b949e; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin-top: 2px;">Dirección de Hidrología — SENAMHI Perú</div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("### 🌊 **ARES NACIONAL**")
-        st.caption("Dirección de Hidrología — SENAMHI Perú")
+    st.markdown("""
+    <div style="text-align: center; margin-top: -15px; margin-bottom: 14px;">
+        <div style="font-size: 1.35rem; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; line-height: 1.2;">ARES NACIONAL</div>
+        <div style="font-size: 0.68rem; color: #8b949e; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-top: 4px;">DIRECCIÓN DE HIDROLOGÍA — SENAMHI PERÚ</div>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("---")
     
     fechas = obtener_fechas_disponibles()
@@ -495,22 +489,14 @@ with st.sidebar:
         st.caption(f"💧 **Diagnóstico Hídrico (Ventana Crítica: {ventana_d} días):**")
         st.altair_chart(chart_diag, use_container_width=True)
 
-# ----------------- ENCABEZADO Y KPIS EJECUTIVOS -----------------
-col_tit, col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5 = st.columns([1.5, 1, 1, 1, 1, 1])
+# ----------------- KPIS EJECUTIVOS NACIONALES -----------------
+col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5 = st.columns(5)
 
 celdas_doble = int(gdf["doble_alerta"].sum())
 celdas_youden = int(gdf["supera_corte_log"].sum())
 celdas_en_alerta_op = int(gdf["evento_op"].sum())
 celdas_criticas = int((gdf["prob"] >= 0.70).sum())
 max_pp = gdf["pp"].max() if not gdf.empty else 0.0
-
-with col_tit:
-    st.markdown("""
-    <div style="padding-top: 4px;">
-        <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; line-height: 1.2;">ARES NACIONAL</div>
-        <div style="font-size: 0.68rem; color: #8b949e; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-top: 4px;">DIRECCIÓN DE HIDROLOGÍA — SENAMHI PERÚ</div>
-    </div>
-    """, unsafe_allow_html=True)
 
 with col_kpi1:
     st.markdown(f"""
@@ -567,7 +553,7 @@ with col_b3:
         st.session_state["reg_foco"] = "selva"
         st.rerun()
 with col_b4:
-    if st.button("🏔️ Sierra Sur", use_container_width=True):
+    if st.button("⛰️ Sierra Sur", use_container_width=True):
         st.session_state["reg_foco"] = "sur"
         st.rerun()
 
