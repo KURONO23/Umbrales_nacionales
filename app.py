@@ -151,10 +151,73 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ----------------- MODAL DIALOG "ACERCA DE" (ESTILO CAMELS-PE / SENAMHI) -----------------
+def render_contenido_acerca_de():
+    st.markdown("""
+    <h3 style="color: #58a6ff; font-weight: 700; margin-top: 0; margin-bottom: 12px;">Bienvenido a ARES NACIONAL</h3>
+    
+    <p style="font-size: 0.95rem; line-height: 1.55; margin-bottom: 16px;">
+        <b>ARES NACIONAL</b> (<b>SistemA de MonitoReo y Pronóstico FrEnte a InundacioneS Urbanas</b>) es una plataforma operativa de libre acceso desarrollada por el SENAMHI para el monitoreo continuo y emisión de alertas tempranas frente al peligro de inundaciones urbanas a escala de la grilla PISCO (0.1° × 0.1°) en el territorio peruano.
+    </p>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("##### 📦 **Contenido y Modelamiento**")
+    st.markdown("""
+    * **3,993 celdas continentales:** Cobertura nacional sobre las celdas con evidencia de riesgo y población expuesta (3,385 con modelo propio calibrado in-situ y 608 transferidos por vecino más próximo).
+    * **Doble enfoque de alerta temprana:**
+      * **Modelo de Regresión Logística (Firth):** Estimación de probabilidad continua con reducción de sesgo por eventos raros y punto de corte calibrado individualmente vía **Índice de Youden** (curva ROC).
+      * **Modelo Físico-Operativo ($I_{op}$):** Severidad hídrica acumulada ($I_{op} = pp + ant_{op}$) evaluada contra el umbral crítico optimizado vía **MCC (Matthews Correlation Coefficient)**.
+    * **Ventana antecedente adaptativa:** De 1 a 15 días según el tiempo de respuesta hidrológica (escorrentía directa en costa/selva baja y dinámica de saturación progresiva en sierra).
+    * **Semáforo de Doble Alerta:** Identificación de celdas donde coinciden simultáneamente la superación del corte probabilístico y del umbral físico-operativo.
+    """)
+
+    st.markdown("##### 🌐 **Fuentes de datos**")
+    st.markdown("""
+    * **Eventos históricos de inundación:** Groundsource (Google Research / LLM Gemini), con más de 36,000 registros procesados a escala diaria nacional.
+    * **Precipitación histórica de calibración:** PISCOp v3.0 (1981–2025) a 0.1° de resolución (SENAMHI).
+    * **Precipitación operativa diaria:** Repositorio institucional PISCO Operativo (SENAMHI, actualización diaria continua a las 14:30 h).
+    * **Validación retrospectiva independiente:** Registro histórico de emergencias del Instituto Nacional de Defensa Civil (**INDECI**, episodio récord El Niño 1997–98).
+    * **Red hidrográfica y geopolítica:** Ríos y quebradas de la Autoridad Nacional del Agua (**ANA**) y límites territoriales del IGN.
+    """)
+
+    st.markdown("##### 👥 **Autores**")
+    st.markdown("""
+    **Andrés Goyburo Peña, Eder Pineda Yaros, Max Gutiérrez Reynaga, Waldo Sven Lavado Casimiro**  
+    *SENAMHI — Servicio Nacional de Meteorología e Hidrología del Perú*  
+    *Universidad Nacional Mayor de San Marcos (UNMSM)*
+    """)
+    st.markdown("---")
+    if st.button("Comenzar a Explorar 🚀", use_container_width=True, type="primary"):
+        st.rerun()
+
+if hasattr(st, "dialog"):
+    @st.dialog("Acerca de ARES NACIONAL", width="large")
+    def modal_acerca_de():
+        render_contenido_acerca_de()
+elif hasattr(st, "experimental_dialog"):
+    @st.experimental_dialog("Acerca de ARES NACIONAL", width="large")
+    def modal_acerca_de():
+        render_contenido_acerca_de()
+else:
+    def modal_acerca_de():
+        with st.expander("ℹ️ **Acerca de ARES NACIONAL**", expanded=True):
+            render_contenido_acerca_de()
+
+# Desplegar automáticamente al abrir el visor por primera vez en la sesión
+if "acerca_de_mostrado" not in st.session_state:
+    st.session_state["acerca_de_mostrado"] = True
+    modal_acerca_de()
+
 # ----------------- SIDEBAR: CONTROLES ESTILO GOOGLE FLOOD HUB -----------------
 with st.sidebar:
-    st.markdown("### 🌊 **ARES NACIONAL**")
-    st.caption("Dirección de Hidrología — SENAMHI Perú")
+    col_sb_tit, col_sb_btn = st.columns([2.5, 1.5])
+    with col_sb_tit:
+        st.markdown("### 🌊 **ARES NACIONAL**")
+        st.caption("SENAMHI Perú")
+    with col_sb_btn:
+        st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+        if st.button("ℹ️ Acerca de", key="btn_sb_acerca", use_container_width=True):
+            modal_acerca_de()
     st.markdown("---")
     
     fechas = obtener_fechas_disponibles()
@@ -411,7 +474,7 @@ with st.sidebar:
         st.altair_chart(chart_diag, use_container_width=True)
 
 # ----------------- ENCABEZADO Y KPIS EJECUTIVOS -----------------
-col_tit, col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5 = st.columns([2.0, 0.9, 0.9, 0.9, 0.9, 0.9])
+col_tit, col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5, col_btn_acerca = st.columns([1.8, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85])
 
 celdas_doble = int(gdf["doble_alerta"].sum())
 celdas_youden = int(gdf["supera_corte_log"].sum())
@@ -462,6 +525,11 @@ with col_kpi5:
         <div class="metric-value" style="color: #58a6ff;">{max_pp:.1f} <span style="font-size: 0.85rem;">mm</span></div>
     </div>
     """, unsafe_allow_html=True)
+
+with col_btn_acerca:
+    st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+    if st.button("ℹ️ Acerca de", key="btn_head_acerca", use_container_width=True, help="Información metodológica, fuentes y autores"):
+        modal_acerca_de()
 
 # ----------------- PÍLDORAS DE SALTO RÁPIDO A REGIONES VULNERABLES -----------------
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
