@@ -296,17 +296,17 @@ with st.sidebar:
     dist_sel = st.selectbox("Distrito / Zona:", options=opciones_dist, index=0)
     
     st.markdown("---")
-    st.markdown("#### 🎚️ **Filtro de Severidad**")
+    st.markdown("#### 🎚️ **Filtro de Niveles de Alerta**")
     
     severidad_sel = st.radio(
         "Nivel de Alerta:",
         options=[
             "Todas las Celdas",
-            "🚨 Alerta Operativa (Iop ≥ Umbral)",
-            "⚡ Doble Alerta (Logística + Operativa)",
-            "🔴 Crítico (Prob ≥ 70%)",
-            "🟠 Alto (Prob 40-70%)",
-            "🟡 Moderado (Prob 20-40%)"
+            "🔴 Nivel de Alerta: Alta (2)",
+            "🟡 Nivel de Alerta: Media (1)",
+            "⚪ Nivel de Alerta: Baja (0)",
+            "🚨 Operativa",
+            "⚡ Doble Alerta"
         ],
         index=0
     )
@@ -333,21 +333,21 @@ if dept_sel != "Todos los Departamentos":
     gdf_filtrado = gdf_filtrado[gdf_filtrado["DEPARTAMENTO"] == dept_sel]
 
 # Filtro por severidad y modo visual para PyDeck
-if severidad_sel == "🚨 Alerta Operativa (Iop ≥ Umbral)":
+if severidad_sel == "🔴 Nivel de Alerta: Alta (2)":
+    gdf_filtrado = gdf_filtrado[gdf_filtrado["nivel_alerta_cod"] == 2]
+    modo_clave = "prob"
+elif severidad_sel == "🟡 Nivel de Alerta: Media (1)":
+    gdf_filtrado = gdf_filtrado[gdf_filtrado["nivel_alerta_cod"] == 1]
+    modo_clave = "prob"
+elif severidad_sel == "⚪ Nivel de Alerta: Baja (0)":
+    gdf_filtrado = gdf_filtrado[gdf_filtrado["nivel_alerta_cod"] == 0]
+    modo_clave = "prob"
+elif severidad_sel == "🚨 Operativa":
     gdf_filtrado = gdf_filtrado[gdf_filtrado["evento_op"] == 1]
     modo_clave = "op"
-elif severidad_sel == "⚡ Doble Alerta (Logística + Operativa)":
+elif severidad_sel == "⚡ Doble Alerta":
     gdf_filtrado = gdf_filtrado[gdf_filtrado["doble_alerta"] == 1]
     modo_clave = "dual"
-elif severidad_sel == "🔴 Crítico (Prob ≥ 70%)":
-    gdf_filtrado = gdf_filtrado[gdf_filtrado["prob"] >= 0.70]
-    modo_clave = "prob"
-elif severidad_sel == "🟠 Alto (Prob 40-70%)":
-    gdf_filtrado = gdf_filtrado[(gdf_filtrado["prob"] >= 0.40) & (gdf_filtrado["prob"] < 0.70)]
-    modo_clave = "prob"
-elif severidad_sel == "🟡 Moderado (Prob 20-40%)":
-    gdf_filtrado = gdf_filtrado[(gdf_filtrado["prob"] >= 0.20) & (gdf_filtrado["prob"] < 0.40)]
-    modo_clave = "prob"
 else:
     modo_clave = "prob"
 
