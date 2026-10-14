@@ -307,7 +307,7 @@ def crear_mapa_pydeck(
             <div style="font-size: 11px; color: #8b949e; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
                 {PROVINCIA}, {DEPARTAMENTO}
             </div>
-            <div style="margin-bottom: 4px;"><b>Probabilidad:</b> <span style="color: #f2cc60; font-size: 13px; font-weight: 700;">{prob_pct}%</span> <span style="color: #8b949e; font-size: 11px;">(Corte Youden: {prob_corte_pct}%)</span></div>
+            <div style="margin-bottom: 4px;"><b>Probabilidad:</b> <span style="color: #f2cc60; font-size: 13px; font-weight: 700;">{prob_pct}%</span></div>
             <div style="margin-bottom: 4px;"><b>Severidad Iop:</b> <span style="color: #58a6ff; font-weight: 600;">{Iop} mm</span> <span style="color: #8b949e; font-size: 11px;">(Umbral: {umbral_op} mm)</span></div>
             <div style="margin-bottom: 3px;"><b>Lluvia 24h:</b> {pp} mm · <b>Antecedente:</b> {ant_log} mm ({mejor_ventana_log}d)</div>
             <div style="color: #8b949e; font-size: 11px; margin-top: 6px; border-top: 1px solid #30363d; padding-top: 4px;">
