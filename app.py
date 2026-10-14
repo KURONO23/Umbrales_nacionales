@@ -128,15 +128,6 @@ st.markdown("""
         font-size: 0.75rem;
         font-weight: 600;
     }
-    .badge-youden {
-        background: rgba(224, 64, 251, 0.2);
-        color: #e040fb;
-        border: 1px solid #e040fb;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 700;
-    }
     .badge-dual {
         background: rgba(255, 0, 85, 0.25);
         color: #ff0055;
@@ -311,7 +302,6 @@ with st.sidebar:
         "Nivel de Alerta:",
         options=[
             "Todas las Celdas",
-            "🎯 Supera Corte Youden (prob ≥ prob_corte)",
             "🚨 Alerta Operativa (Iop ≥ Umbral)",
             "⚡ Doble Alerta (Logística + Operativa)",
             "🔴 Crítico (Prob ≥ 70%)",
@@ -343,10 +333,7 @@ if dept_sel != "Todos los Departamentos":
     gdf_filtrado = gdf_filtrado[gdf_filtrado["DEPARTAMENTO"] == dept_sel]
 
 # Filtro por severidad y modo visual para PyDeck
-if severidad_sel == "🎯 Supera Corte Youden (prob ≥ prob_corte)":
-    gdf_filtrado = gdf_filtrado[gdf_filtrado["supera_corte_log"] == 1]
-    modo_clave = "corte"
-elif severidad_sel == "🚨 Alerta Operativa (Iop ≥ Umbral)":
+if severidad_sel == "🚨 Alerta Operativa (Iop ≥ Umbral)":
     gdf_filtrado = gdf_filtrado[gdf_filtrado["evento_op"] == 1]
     modo_clave = "op"
 elif severidad_sel == "⚡ Doble Alerta (Logística + Operativa)":
@@ -401,8 +388,6 @@ with st.sidebar:
         st.markdown("---")
         fila_f = gdf[gdf["DISTRITO"] == dist_sel].sort_values(by="prob", ascending=False).iloc[0]
         prob_pct = float(fila_f["prob_pct"])
-        prob_corte_pct = float(fila_f["prob_corte_pct"])
-        supera_corte = int(fila_f["supera_corte_log"])
         evento_op = int(fila_f["evento_op"])
         doble = int(fila_f["doble_alerta"])
         iop_val = float(fila_f["Iop"])
@@ -414,8 +399,6 @@ with st.sidebar:
 
         if doble == 1:
             badge_html = '<span class="badge-dual">⚡ DOBLE ALERTA</span>'
-        elif supera_corte == 1:
-            badge_html = '<span class="badge-youden">🎯 ALERTA YOUDEN</span>'
         elif evento_op == 1:
             badge_html = '<span class="badge-critical">🚨 ALERTA OP</span>'
         elif prob_pct >= 70:
@@ -449,10 +432,9 @@ with st.sidebar:
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 2px;">
                     <span>Probabilidad: <b style="color: #f2cc60;">{prob_pct:.1f}%</b></span>
-                    <span style="color: #8b949e;">Corte Youden: <b>{prob_corte_pct:.1f}%</b></span>
                 </div>
                 <div style="width: 100%; background: #21262d; height: 6px; border-radius: 3px; overflow: hidden;">
-                    <div style="width: {pct_bar_prob}%; background: {'#e040fb' if supera_corte==1 else ('#ff9800' if prob_pct>=40 else '#f2cc60')}; height: 100%;"></div>
+                    <div style="width: {pct_bar_prob}%; background: {'#ff9800' if prob_pct>=40 else '#f2cc60'}; height: 100%;"></div>
                 </div>
             </div>
 
@@ -490,10 +472,9 @@ with st.sidebar:
         st.altair_chart(chart_diag, use_container_width=True)
 
 # ----------------- KPIS EJECUTIVOS NACIONALES -----------------
-col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5 = st.columns(5)
+col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
 
 celdas_doble = int(gdf["doble_alerta"].sum())
-celdas_youden = int(gdf["supera_corte_log"].sum())
 celdas_en_alerta_op = int(gdf["evento_op"].sum())
 celdas_criticas = int((gdf["prob"] >= 0.70).sum())
 max_pp = gdf["pp"].max() if not gdf.empty else 0.0
@@ -509,20 +490,12 @@ with col_kpi1:
 with col_kpi2:
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-title">🎯 CORTE YOUDEN</div>
-        <div class="metric-value" style="color: #e040fb;">{celdas_youden}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col_kpi3:
-    st.markdown(f"""
-    <div class="metric-card">
         <div class="metric-title">🌊 ALERTA OP (IOP)</div>
         <div class="metric-value" style="color: #ff5252;">{celdas_en_alerta_op}</div>
     </div>
     """, unsafe_allow_html=True)
 
-with col_kpi4:
+with col_kpi3:
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-title">🔴 CRÍTICO (≥70%)</div>
@@ -530,7 +503,7 @@ with col_kpi4:
     </div>
     """, unsafe_allow_html=True)
 
-with col_kpi5:
+with col_kpi4:
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-title">LLUVIA MÁX 24H</div>
@@ -592,7 +565,6 @@ leyenda_html = f"""
             <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 235, 59); border-radius: 3px; display: inline-block;"></span> <span style="color: #f2cc60;">20-40% Moderado</span></div>
             <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 152, 0); border-radius: 3px; display: inline-block;"></span> <span style="color: #ff9800;">40-70% Alto</span></div>
             <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(244, 67, 54); border-radius: 3px; display: inline-block;"></span> <span style="color: #f85149; font-weight: bold;">≥ 70% Crítico</span></div>
-            <div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 12px; height: 12px; background: rgb(224, 64, 251); border-radius: 3px; display: inline-block;"></span> <span style="color: #e040fb; font-weight: bold;">🎯 Corte Youden</span></div>
             <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 23, 68); border-radius: 3px; display: inline-block;"></span> <span style="color: #ff1744; font-weight: bold;">🚨 Alerta Op (Iop)</span></div>
             <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 0, 85); border-radius: 3px; display: inline-block; box-shadow: 0 0 6px #ff0055;"></span> <span style="color: #ff0055; font-weight: bold;">⚡ Doble Alerta</span></div>
             {rios_leyenda}
@@ -610,7 +582,7 @@ with st.expander("📋 **Boletín Ejecutivo: Tabla de Zonas Bajo Alerta & Export
     df_export = gdf[filtro_alerta_tabla][
         [
             "id", "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
-            "prob_pct", "prob_corte_pct", "supera_corte_log",
+            "prob_pct",
             "Iop", "umbral_op", "evento_op", "doble_alerta",
             "pp", "ant_log", "mejor_ventana_log", "modelo_origen", "auc_log",
             "lat", "lon"
@@ -621,8 +593,6 @@ with st.expander("📋 **Boletín Ejecutivo: Tabla de Zonas Bajo Alerta & Export
         df_export.rename(columns={
             "id": "ID Celda",
             "prob_pct": "Prob (%)",
-            "prob_corte_pct": "Corte Youden (%)",
-            "supera_corte_log": "Alerta Youden",
             "Iop": "Severidad Iop (mm)",
             "umbral_op": "Umbral Crítico (mm)",
             "evento_op": "Alerta Operativa",
