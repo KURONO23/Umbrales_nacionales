@@ -308,7 +308,7 @@ def crear_mapa_pydeck(
                 {PROVINCIA}, {DEPARTAMENTO}
             </div>
             <div style="margin-bottom: 4px;"><b>Probabilidad:</b> <span style="color: #f2cc60; font-size: 13px; font-weight: 700;">{prob_pct}%</span></div>
-            <div style="margin-bottom: 4px;"><b>Evento OP:</b> <span style="color: #58a6ff; font-weight: 600;">{evento_op}</span></div>
+            <div style="margin-bottom: 4px;"><b>Operativa:</b> <span style="color: #58a6ff; font-weight: 600;">{evento_op}</span></div>
             <div style="margin-bottom: 3px;"><b>Lluvia 24h:</b> {pp} mm · <b>Antecedente:</b> {ant_log} mm ({mejor_ventana_log}d)</div>
             <div style="color: #8b949e; font-size: 11px; margin-top: 6px; border-top: 1px solid #30363d; padding-top: 4px;">
                 ⚙️ Modelo: {modelo_origen_txt}
