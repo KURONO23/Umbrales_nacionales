@@ -303,8 +303,8 @@ with st.sidebar:
         options=[
             "Todas las Celdas",
             "🗺️ Nivel de Alerta",
+            "📊 Probabilidad",
             "🚨 Operativa",
-            "⚡ Doble Alerta"
         ],
         index=0
     )
@@ -340,12 +340,11 @@ if dept_sel != "Todos los Departamentos":
 # Filtro por severidad y modo visual para PyDeck
 if severidad_sel == "🗺️ Nivel de Alerta":
     modo_clave = "nivel_alerta"
+elif severidad_sel == "📊 Probabilidad":
+    modo_clave = "prob"
 elif severidad_sel == "🚨 Operativa":
     gdf_filtrado = gdf_filtrado[gdf_filtrado["evento_op"] == 1]
     modo_clave = "op"
-elif severidad_sel == "⚡ Doble Alerta":
-    gdf_filtrado = gdf_filtrado[gdf_filtrado["doble_alerta"] == 1]
-    modo_clave = "dual"
 else:
     modo_clave = "todas"
 
