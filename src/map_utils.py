@@ -367,11 +367,9 @@ def crear_mapa_pydeck(
             <div style="margin-bottom: 4px;"><b>Nivel de Alerta:</b> <span style="color: {nivel_alerta_color}; font-weight: 700;">{nivel_alerta_txt}</span></div>
             <div style="margin-bottom: 4px;"><b>Operativa:</b> <span style="color: #58a6ff; font-weight: 600;">{evento_op}</span></div>
         """
-    else:  # Todas las Celdas: mostrar las tres salidas
+    else:  # Vista unificada: mostrar solo el nivel en el recuadro
         metricas_tooltip = """
             <div style="margin-bottom: 4px;"><b>Nivel de Alerta:</b> <span style="color: {nivel_alerta_color}; font-weight: 700;">{nivel_alerta_txt}</span></div>
-            <div style="margin-bottom: 4px;"><b>Probabilidad:</b> <span style="color: #f2cc60; font-size: 13px; font-weight: 700;">{prob_pct}%</span></div>
-            <div style="margin-bottom: 4px;"><b>Operativa:</b> <span style="color: #58a6ff; font-weight: 600;">{evento_op}</span></div>
         """
 
     tooltip = {
