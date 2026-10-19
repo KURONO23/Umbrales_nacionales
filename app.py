@@ -340,7 +340,7 @@ elif severidad_sel == "⚡ Doble Alerta":
     gdf_filtrado = gdf_filtrado[gdf_filtrado["doble_alerta"] == 1]
     modo_clave = "dual"
 else:
-    modo_clave = "prob"
+    modo_clave = "nivel_alerta"
 
 # Determinar centro y zoom dinámico del mapa (Fly-To)
 centro_lat = -9.19
