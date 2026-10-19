@@ -25,12 +25,23 @@ def obtener_color_evento_op(evento):
         return [255, 23, 68, 230] # Alerta Sí
     return [150, 150, 150, 25]     # Normal
 
-def obtener_color_nivel_alerta(nivel):
-    """Colores para NIVEL_ALERTA_GRILLA: 0=Baja, 1=Media, 2=Alta."""
+def normalizar_nivel_alerta(nivel):
+    """Normaliza el código NIVEL_ALERTA_GRILLA a 0, 1 o 2."""
     try:
+        if pd.isna(nivel):
+            return 0
         nivel = int(nivel)
     except (TypeError, ValueError):
         nivel = 0
+    return nivel if nivel in (0, 1, 2) else 0
+
+def nombre_nivel_alerta(nivel):
+    """Devuelve el nombre visible asociado al código de nivel de alerta."""
+    return {0: "Baja", 1: "Media", 2: "Alta"}.get(normalizar_nivel_alerta(nivel), "Baja")
+
+def obtener_color_nivel_alerta(nivel):
+    """Colores para NIVEL_ALERTA_GRILLA: 0=Baja, 1=Media, 2=Alta."""
+    nivel = normalizar_nivel_alerta(nivel)
     if nivel == 2:
         return [244, 67, 54, 230]      # Alta
     if nivel == 1:
@@ -58,7 +69,7 @@ def preparar_features_geojson(gdf, modo="prob"):
     
     if modo == "op":
         gdf_copy["fill_color"] = gdf_copy["evento_op"].apply(obtener_color_evento_op)
-    elif modo == "nivel_alerta":
+    elif modo in ("nivel_alerta", "todas"):
         gdf_copy["fill_color"] = gdf_copy["nivel_alerta_cod"].apply(obtener_color_nivel_alerta)
     elif modo == "corte":
         gdf_copy["fill_color"] = gdf_copy["supera_corte_log"].apply(obtener_color_corte_log)
@@ -67,6 +78,8 @@ def preparar_features_geojson(gdf, modo="prob"):
     else:
         gdf_copy["fill_color"] = gdf_copy["prob"].apply(obtener_color_probabilidad)
         
+    if "nivel_alerta_cod" in gdf_copy.columns:
+        gdf_copy["nivel_alerta_txt"] = gdf_copy["nivel_alerta_cod"].apply(nombre_nivel_alerta)
     gdf_copy["line_color"] = [[0, 0, 0, 40] for _ in range(len(gdf_copy))]
     return json.loads(gdf_copy.to_json())
 
@@ -80,7 +93,7 @@ def preparar_features_puntos(gdf, modo="prob"):
         
     if modo == "op":
         gdf_alerta = gdf[gdf["evento_op"] == 1].copy()
-    elif modo == "nivel_alerta":
+    elif modo in ("nivel_alerta", "todas"):
         gdf_alerta = gdf[gdf["nivel_alerta_cod"] >= 1].copy()
     elif modo == "corte":
         gdf_alerta = gdf[gdf["supera_corte_log"] == 1].copy()
@@ -99,9 +112,10 @@ def preparar_features_puntos(gdf, modo="prob"):
         supera_corte = int(row.get("supera_corte_log", 0))
         doble = int(row.get("doble_alerta", 0))
         
-        nivel_alerta = int(row.get("nivel_alerta_cod", 0))
+        nivel_alerta = normalizar_nivel_alerta(row.get("nivel_alerta_cod", 0))
+        nivel_alerta_txt = nombre_nivel_alerta(nivel_alerta)
 
-        if modo == "nivel_alerta":
+        if modo in ("nivel_alerta", "todas"):
             if nivel_alerta >= 2:
                 color_core = [244, 67, 54, 240]
                 color_halo = [244, 67, 54, 80]
@@ -163,6 +177,8 @@ def preparar_features_puntos(gdf, modo="prob"):
             "PROVINCIA": str(row.get("PROVINCIA", "N/D")),
             "DEPARTAMENTO": str(row.get("DEPARTAMENTO", "N/D")),
             "prob_pct": float(row.get("prob_pct", 0.0)),
+            "nivel_alerta_cod": nivel_alerta,
+            "nivel_alerta_txt": nivel_alerta_txt,
             "prob_corte_pct": float(row.get("prob_corte_pct", 20.0)),
             "alerta_log_txt": alerta_log_txt,
             "alerta_op_txt": alerta_op_txt,
@@ -192,7 +208,8 @@ def crear_mapa_pydeck(
     centro_lon=-75.01,
     zoom=4.8,
     estilo_mapa="Oscuro",
-    modo_3d=False
+    modo_3d=False,
+    modo="todas"
 ):
     """
     Genera el mapa interactivo WebGL en PyDeck con look & feel Google Flood Hub:
@@ -326,24 +343,47 @@ def crear_mapa_pydeck(
         bearing=0
     )
 
+    if modo == "nivel_alerta":
+        metricas_tooltip = """
+            <div style="margin-bottom: 4px;"><b>Nivel de Alerta:</b> <span style="color: #f2cc60; font-weight: 700;">{nivel_alerta_txt}</span> <span style="color: #8b949e; font-size: 11px;">(Código {nivel_alerta_cod})</span></div>
+        """
+    elif modo == "prob":
+        metricas_tooltip = """
+            <div style="margin-bottom: 4px;"><b>Probabilidad:</b> <span style="color: #f2cc60; font-size: 13px; font-weight: 700;">{prob_pct}%</span></div>
+        """
+    elif modo == "op":
+        metricas_tooltip = """
+            <div style="margin-bottom: 4px;"><b>Operativa:</b> <span style="color: #58a6ff; font-weight: 600;">{evento_op}</span></div>
+        """
+    elif modo == "dual":
+        metricas_tooltip = """
+            <div style="margin-bottom: 4px;"><b>Nivel de Alerta:</b> <span style="color: #f2cc60; font-weight: 700;">{nivel_alerta_txt}</span> <span style="color: #8b949e; font-size: 11px;">(Código {nivel_alerta_cod})</span></div>
+            <div style="margin-bottom: 4px;"><b>Operativa:</b> <span style="color: #58a6ff; font-weight: 600;">{evento_op}</span></div>
+        """
+    else:  # Todas las Celdas: mostrar las tres salidas
+        metricas_tooltip = """
+            <div style="margin-bottom: 4px;"><b>Nivel de Alerta:</b> <span style="color: #f2cc60; font-weight: 700;">{nivel_alerta_txt}</span> <span style="color: #8b949e; font-size: 11px;">(Código {nivel_alerta_cod})</span></div>
+            <div style="margin-bottom: 4px;"><b>Probabilidad:</b> <span style="color: #f2cc60; font-size: 13px; font-weight: 700;">{prob_pct}%</span></div>
+            <div style="margin-bottom: 4px;"><b>Operativa:</b> <span style="color: #58a6ff; font-weight: 600;">{evento_op}</span></div>
+        """
+
     tooltip = {
-        "html": """
+        "html": f"""
         <div style="font-family: sans-serif; font-size: 13px; color: #fff; background-color: rgba(22, 27, 34, 0.95);
         backdrop-filter: blur(8px); padding: 12px 16px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.7); border: 1px solid #30363d; min-width: 230px;">
             <div style="font-size: 14px; font-weight: 700; margin-bottom: 2px; color: #58a6ff;">
-                📍 {DISTRITO}
+                📍 {{DISTRITO}}
             </div>
             <div style="font-size: 11px; color: #8b949e; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                {PROVINCIA}, {DEPARTAMENTO}
+                {{PROVINCIA}}, {{DEPARTAMENTO}}
             </div>
-            <div style="margin-bottom: 4px;"><b>Probabilidad:</b> <span style="color: #f2cc60; font-size: 13px; font-weight: 700;">{prob_pct}%</span></div>
-            <div style="margin-bottom: 4px;"><b>Operativa:</b> <span style="color: #58a6ff; font-weight: 600;">{evento_op}</span></div>
-            <div style="margin-bottom: 3px;"><b>Lluvia 24h:</b> {pp} mm · <b>Antecedente:</b> {ant_log} mm ({mejor_ventana_log}d)</div>
+            {metricas_tooltip}
+            <div style="margin-bottom: 3px;"><b>Lluvia 24h:</b> {{pp}} mm · <b>Antecedente:</b> {{ant_log}} mm ({{mejor_ventana_log}}d)</div>
             <div style="color: #8b949e; font-size: 11px; margin-top: 6px; border-top: 1px solid #30363d; padding-top: 4px;">
-                ⚙️ Modelo: {modelo_origen_txt}
+                ⚙️ Modelo: {{modelo_origen_txt}}
             </div>
             <div style="color: #6e7681; font-size: 10px; margin-top: 2px;">
-                Celda #{id} · Coord: {lat}, {lon}
+                Celda #{{id}} · Coord: {{lat}}, {{lon}}
             </div>
         </div>
         """,
