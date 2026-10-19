@@ -541,7 +541,6 @@ leyenda_html = f"""
             <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgba(200, 200, 200, 0.2); border: 1px solid #555; border-radius: 3px; display: inline-block;"></span> <span style="color: #8b949e;">Baja</span></div>
             <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 235, 59); border-radius: 3px; display: inline-block;"></span> <span style="color: #f2cc60;">Media</span></div>
             <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(244, 67, 54); border-radius: 3px; display: inline-block;"></span> <span style="color: #f85149; font-weight: bold;">Alta</span></div>
-            <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 23, 68); border-radius: 3px; display: inline-block;"></span> <span style="color: #ff1744; font-weight: bold;">🚨 Operativa</span></div>
             {rios_leyenda}
             <div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #00e5ff; display: inline-block; box-shadow: 0 0 8px #00e5ff;"></span> <span style="color: #00e5ff; font-weight: bold;">Foco</span></div>
         </div>
