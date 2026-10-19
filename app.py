@@ -296,20 +296,6 @@ with st.sidebar:
     dist_sel = st.selectbox("Distrito / Zona:", options=opciones_dist, index=0)
     
     st.markdown("---")
-    st.markdown("#### 🎚️ **Filtro de Niveles de Alerta**")
-    
-    severidad_sel = st.radio(
-        "Nivel de Alerta:",
-        options=[
-            "Todas las Celdas",
-            "🗺️ Nivel de Alerta",
-            "📊 Probabilidad",
-            "🚨 Operativa",
-        ],
-        index=0
-    )
-    
-    st.markdown("---")
     if st.button("ℹ️ Acerca de ARES Nacional", key="btn_sb_acerca", use_container_width=True, help="Conoce los fundamentos metodológicos, fuentes de datos y autores"):
         modal_acerca_de()
 
@@ -337,16 +323,9 @@ gdf_filtrado = gdf.copy()
 if dept_sel != "Todos los Departamentos":
     gdf_filtrado = gdf_filtrado[gdf_filtrado["DEPARTAMENTO"] == dept_sel]
 
-# Filtro por severidad y modo visual para PyDeck
-if severidad_sel == "🗺️ Nivel de Alerta":
-    modo_clave = "nivel_alerta"
-elif severidad_sel == "📊 Probabilidad":
-    modo_clave = "prob"
-elif severidad_sel == "🚨 Operativa":
-    gdf_filtrado = gdf_filtrado[gdf_filtrado["evento_op"] == 1]
-    modo_clave = "op"
-else:
-    modo_clave = "todas"
+# Vista unificada: todas las celdas se colorean por nivel y el tooltip
+# muestra siempre Nivel de Alerta, Probabilidad y Operativa.
+modo_clave = "todas"
 
 # Determinar centro y zoom dinámico del mapa (Fly-To)
 centro_lat = -9.19
