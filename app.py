@@ -312,6 +312,13 @@ with st.sidebar:
     st.markdown("---")
     if st.button("ℹ️ Acerca de ARES Nacional", key="btn_sb_acerca", use_container_width=True, help="Conoce los fundamentos metodológicos, fuentes de datos y autores"):
         modal_acerca_de()
+
+    st.markdown("""
+    <div style="margin-top: 12px; padding: 10px 12px; border: 1px solid #8b6f2f; border-radius: 6px; background: rgba(139, 111, 47, 0.16); color: #d8c58a; font-size: 0.72rem; line-height: 1.45;">
+        <b>¡Importante!</b> Los resultados mostrados en este visor son referenciales y pueden contener incertidumbre, sobre todo a pequeñas escalas de trabajo.<br><br>
+        El SENAMHI no se responsabiliza por el uso inadecuado de esta información.
+    </div>
+    """, unsafe_allow_html=True)
     
 # Parámetros por defecto para el renderizado del mapa
 mostrar_rios = True
