@@ -520,41 +520,51 @@ with st.expander("📋 **Boletín Ejecutivo: Tabla de Zonas Bajo Alerta & Export
         if columna not in df_boletin.columns:
             df_boletin[columna] = valor
 
+    # Mantener también todos los campos publicados en el CSV resumen.
+    columnas_csv = [
+        "pp", "ant_log", "ant_op", "prob", "prob_corte", "evento_log",
+        "Iop", "umbral_op", "evento_op", "prob_corte_orig", "calidad_log",
+        "calidad_op", "nivel_alerta_cod", "nivel_alerta"
+    ]
+    valores_csv_por_defecto = {
+        "ant_op": 0.0,
+        "evento_log": 0,
+        "prob_corte_orig": df_boletin["prob_corte"],
+        "calidad_log": "N/D",
+        "calidad_op": "N/D",
+        "nivel_alerta_cod": 0,
+        "nivel_alerta": "baja",
+    }
+    for columna in columnas_csv:
+        if columna not in df_boletin.columns:
+            valor = valores_csv_por_defecto.get(columna, 0.0)
+            df_boletin[columna] = valor
+
     # Celdas que presentan al menos una señal de alerta operativa o probabilística.
     filtro_alerta_tabla = (df_boletin["prob"] >= 0.20) | (df_boletin["supera_corte_log"] == 1) | (df_boletin["evento_op"] == 1)
     df_export = df_boletin[filtro_alerta_tabla][
         [
             "id", "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
-            "prob_pct",
-            "Iop", "umbral_op", "evento_op", "doble_alerta",
-            "pp", "ant_log", "mejor_ventana_log", "modelo_origen", "auc_log",
+            *columnas_csv,
             "lat", "lon"
         ]
-    ].sort_values(by="prob_pct", ascending=False)
+    ].sort_values(by="prob", ascending=False)
+
+    df_export_presentacion = df_export.rename(columns={
+        "id": "ID Celda",
+        "lat": "Lat",
+        "lon": "Lon",
+    })
     
     st.dataframe(
-        df_export.rename(columns={
-            "id": "ID Celda",
-            "prob_pct": "Prob (%)",
-            "Iop": "Severidad Iop (mm)",
-            "umbral_op": "Umbral Crítico (mm)",
-            "evento_op": "Alerta Operativa",
-            "doble_alerta": "Doble Alerta",
-            "pp": "Lluvia 24h (mm)",
-            "ant_log": "Antecedente (mm)",
-            "mejor_ventana_log": "Ventana (d)",
-            "modelo_origen": "Modelo",
-            "auc_log": "AUC-ROC",
-            "lat": "Lat",
-            "lon": "Lon"
-        }),
+        df_export_presentacion,
         use_container_width=True,
         hide_index=True
     )
     
     col_exp1, col_exp2 = st.columns([1, 4])
     with col_exp1:
-        csv_data = df_export.to_csv(index=False).encode('utf-8')
+        csv_data = df_export_presentacion.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="📥 Descargar Boletín CSV Completo",
             data=csv_data,
