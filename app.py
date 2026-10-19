@@ -548,9 +548,15 @@ with st.expander("📋 **Boletín Ejecutivo: Tabla de Zonas Bajo Alerta & Export
     if dist_sel != "(Nacional / Sin selección)":
         filtro_territorial &= df_boletin["DISTRITO"] == dist_sel
 
-    # Celdas que presentan al menos una señal de alerta operativa o probabilística.
+    # En una vista territorial se muestran todas las celdas del territorio
+    # seleccionado, incluso si el valor está por debajo del umbral; así el
+    # Boletín no queda vacío al consultar un distrito sin alerta activa.
     filtro_alerta = (df_boletin["prob"] >= 0.20) | (df_boletin["supera_corte_log"] == 1) | (df_boletin["evento_op"] == 1)
-    filtro_alerta_tabla = filtro_territorial & filtro_alerta
+    hay_seleccion_territorial = (
+        dept_sel != "Todos los Departamentos"
+        or dist_sel != "(Nacional / Sin selección)"
+    )
+    filtro_alerta_tabla = filtro_territorial if hay_seleccion_territorial else filtro_alerta
     df_export = df_boletin[filtro_alerta_tabla][
         [
             "id", "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
