@@ -462,9 +462,67 @@ st.markdown(leyenda_html, unsafe_allow_html=True)
 
 # ----------------- TABLA DE DETALLE Y EXPORTACIÓN SENAMHI -----------------
 with st.expander("📋 **Boletín Ejecutivo: Tabla de Zonas Bajo Alerta & Exportación SENAMHI**", expanded=False):
-    # Celdas que presentan al menos una señal de alerta operativa o probabilística
-    filtro_alerta_tabla = (gdf["prob"] >= 0.20) | (gdf["supera_corte_log"] == 1) | (gdf["evento_op"] == 1)
-    df_export = gdf[filtro_alerta_tabla][
+    # El boletín toma sus valores operativos del CSV resumen de la fecha.
+    # La ubicación (ubigeo y coordenadas) se conserva desde la grilla espacial.
+    if df_resumen is not None and not df_resumen.empty:
+        df_boletin = df_resumen.copy()
+        df_boletin["id_num"] = pd.to_numeric(df_boletin["ciudad"], errors="coerce")
+
+        columnas_ubicacion = ["id_num", "DEPARTAMENTO", "PROVINCIA", "DISTRITO", "lat", "lon"]
+        ubicaciones = gdf[columnas_ubicacion].copy()
+        ubicaciones["id_num"] = pd.to_numeric(ubicaciones["id_num"], errors="coerce")
+        ubicaciones = ubicaciones.drop_duplicates(subset=["id_num"])
+        df_boletin = df_boletin.merge(ubicaciones, on="id_num", how="left")
+
+        # Estos metadatos no forman parte del CSV resumen, pero siguen siendo
+        # útiles en la tabla y se recuperan de la grilla para no perderlos.
+        columnas_metadatos = ["id_num", "mejor_ventana_log", "modelo_origen", "auc_log"]
+        metadatos = gdf[[c for c in columnas_metadatos if c in gdf.columns]].copy()
+        if "id_num" in metadatos.columns:
+            metadatos["id_num"] = pd.to_numeric(metadatos["id_num"], errors="coerce")
+            metadatos = metadatos.drop_duplicates(subset=["id_num"])
+            df_boletin = df_boletin.merge(metadatos, on="id_num", how="left")
+
+        df_boletin["id"] = df_boletin["id_num"]
+    else:
+        # Fallback defensivo para fechas antiguas sin CSV resumen.
+        df_boletin = gdf.copy()
+
+    # Normalizar los campos que utiliza la tabla, respetando los valores del CSV.
+    def serie_numerica(nombre, valor_default=0.0):
+        serie = df_boletin[nombre] if nombre in df_boletin.columns else pd.Series(valor_default, index=df_boletin.index)
+        return pd.to_numeric(serie, errors="coerce").fillna(valor_default)
+
+    df_boletin["prob"] = serie_numerica("prob")
+    df_boletin["prob_pct"] = (df_boletin["prob"] * 100).round(1)
+    df_boletin["prob_corte"] = serie_numerica("prob_corte", 0.20)
+    df_boletin["pp"] = serie_numerica("pp").round(1)
+    df_boletin["ant_log"] = serie_numerica("ant_log").round(1)
+    if "Iop" not in df_boletin.columns:
+        df_boletin["Iop"] = df_boletin["pp"] + df_boletin["ant_log"]
+    df_boletin["Iop"] = serie_numerica("Iop").round(1)
+    df_boletin["umbral_op"] = serie_numerica("umbral_op", 50.0).round(1)
+    df_boletin["evento_op"] = serie_numerica("evento_op").astype(int)
+    df_boletin["supera_corte_log"] = (df_boletin["prob"] >= df_boletin["prob_corte"]).astype(int)
+    df_boletin["doble_alerta"] = ((df_boletin["supera_corte_log"] == 1) & (df_boletin["evento_op"] == 1)).astype(int)
+
+    valores_por_defecto = {
+        "mejor_ventana_log": 15,
+        "modelo_origen": "propio",
+        "auc_log": 0.890,
+        "DEPARTAMENTO": "N/D",
+        "PROVINCIA": "N/D",
+        "DISTRITO": "N/D",
+        "lat": None,
+        "lon": None,
+    }
+    for columna, valor in valores_por_defecto.items():
+        if columna not in df_boletin.columns:
+            df_boletin[columna] = valor
+
+    # Celdas que presentan al menos una señal de alerta operativa o probabilística.
+    filtro_alerta_tabla = (df_boletin["prob"] >= 0.20) | (df_boletin["supera_corte_log"] == 1) | (df_boletin["evento_op"] == 1)
+    df_export = df_boletin[filtro_alerta_tabla][
         [
             "id", "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
             "prob_pct",
