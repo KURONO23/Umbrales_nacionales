@@ -39,6 +39,10 @@ def nombre_nivel_alerta(nivel):
     """Devuelve el nombre visible asociado al código de nivel de alerta."""
     return {0: "Baja", 1: "Media", 2: "Alta"}.get(normalizar_nivel_alerta(nivel), "Baja")
 
+def color_texto_nivel_alerta(nivel):
+    """Color visible del nombre del nivel de alerta."""
+    return {0: "#8b949e", 1: "#f2cc60", 2: "#f85149"}.get(normalizar_nivel_alerta(nivel), "#8b949e")
+
 def obtener_color_nivel_alerta(nivel):
     """Colores para NIVEL_ALERTA_GRILLA: 0=Baja, 1=Media, 2=Alta."""
     nivel = normalizar_nivel_alerta(nivel)
@@ -80,6 +84,7 @@ def preparar_features_geojson(gdf, modo="prob"):
         
     if "nivel_alerta_cod" in gdf_copy.columns:
         gdf_copy["nivel_alerta_txt"] = gdf_copy["nivel_alerta_cod"].apply(nombre_nivel_alerta)
+        gdf_copy["nivel_alerta_color"] = gdf_copy["nivel_alerta_cod"].apply(color_texto_nivel_alerta)
     gdf_copy["line_color"] = [[0, 0, 0, 40] for _ in range(len(gdf_copy))]
     return json.loads(gdf_copy.to_json())
 
@@ -114,6 +119,7 @@ def preparar_features_puntos(gdf, modo="prob"):
         
         nivel_alerta = normalizar_nivel_alerta(row.get("nivel_alerta_cod", 0))
         nivel_alerta_txt = nombre_nivel_alerta(nivel_alerta)
+        nivel_alerta_color = color_texto_nivel_alerta(nivel_alerta)
 
         if modo in ("nivel_alerta", "todas"):
             if nivel_alerta >= 2:
@@ -179,6 +185,7 @@ def preparar_features_puntos(gdf, modo="prob"):
             "prob_pct": float(row.get("prob_pct", 0.0)),
             "nivel_alerta_cod": nivel_alerta,
             "nivel_alerta_txt": nivel_alerta_txt,
+            "nivel_alerta_color": nivel_alerta_color,
             "prob_corte_pct": float(row.get("prob_corte_pct", 20.0)),
             "alerta_log_txt": alerta_log_txt,
             "alerta_op_txt": alerta_op_txt,
@@ -345,7 +352,7 @@ def crear_mapa_pydeck(
 
     if modo == "nivel_alerta":
         metricas_tooltip = """
-            <div style="margin-bottom: 4px;"><b>Nivel de Alerta:</b> <span style="color: #f2cc60; font-weight: 700;">{nivel_alerta_txt}</span> <span style="color: #8b949e; font-size: 11px;">(Código {nivel_alerta_cod})</span></div>
+            <div style="margin-bottom: 4px;"><b>Nivel de Alerta:</b> <span style="color: {nivel_alerta_color}; font-weight: 700;">{nivel_alerta_txt}</span></div>
         """
     elif modo == "prob":
         metricas_tooltip = """
@@ -357,12 +364,12 @@ def crear_mapa_pydeck(
         """
     elif modo == "dual":
         metricas_tooltip = """
-            <div style="margin-bottom: 4px;"><b>Nivel de Alerta:</b> <span style="color: #f2cc60; font-weight: 700;">{nivel_alerta_txt}</span> <span style="color: #8b949e; font-size: 11px;">(Código {nivel_alerta_cod})</span></div>
+            <div style="margin-bottom: 4px;"><b>Nivel de Alerta:</b> <span style="color: {nivel_alerta_color}; font-weight: 700;">{nivel_alerta_txt}</span></div>
             <div style="margin-bottom: 4px;"><b>Operativa:</b> <span style="color: #58a6ff; font-weight: 600;">{evento_op}</span></div>
         """
     else:  # Todas las Celdas: mostrar las tres salidas
         metricas_tooltip = """
-            <div style="margin-bottom: 4px;"><b>Nivel de Alerta:</b> <span style="color: #f2cc60; font-weight: 700;">{nivel_alerta_txt}</span> <span style="color: #8b949e; font-size: 11px;">(Código {nivel_alerta_cod})</span></div>
+            <div style="margin-bottom: 4px;"><b>Nivel de Alerta:</b> <span style="color: {nivel_alerta_color}; font-weight: 700;">{nivel_alerta_txt}</span></div>
             <div style="margin-bottom: 4px;"><b>Probabilidad:</b> <span style="color: #f2cc60; font-size: 13px; font-weight: 700;">{prob_pct}%</span></div>
             <div style="margin-bottom: 4px;"><b>Operativa:</b> <span style="color: #58a6ff; font-weight: 600;">{evento_op}</span></div>
         """
