@@ -540,8 +540,17 @@ with st.expander("📋 **Boletín Ejecutivo: Tabla de Zonas Bajo Alerta & Export
             valor = valores_csv_por_defecto.get(columna, 0.0)
             df_boletin[columna] = valor
 
+    # Vincular el Boletín con Navegación Territorial:
+    # departamento -> todos sus distritos; departamento + distrito -> solo ese distrito.
+    filtro_territorial = pd.Series(True, index=df_boletin.index)
+    if dept_sel != "Todos los Departamentos":
+        filtro_territorial &= df_boletin["DEPARTAMENTO"] == dept_sel
+    if dist_sel != "(Nacional / Sin selección)":
+        filtro_territorial &= df_boletin["DISTRITO"] == dist_sel
+
     # Celdas que presentan al menos una señal de alerta operativa o probabilística.
-    filtro_alerta_tabla = (df_boletin["prob"] >= 0.20) | (df_boletin["supera_corte_log"] == 1) | (df_boletin["evento_op"] == 1)
+    filtro_alerta = (df_boletin["prob"] >= 0.20) | (df_boletin["supera_corte_log"] == 1) | (df_boletin["evento_op"] == 1)
+    filtro_alerta_tabla = filtro_territorial & filtro_alerta
     df_export = df_boletin[filtro_alerta_tabla][
         [
             "id", "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
