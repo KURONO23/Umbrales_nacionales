@@ -25,6 +25,18 @@ def obtener_color_evento_op(evento):
         return [255, 23, 68, 230] # Alerta Sí
     return [150, 150, 150, 25]     # Normal
 
+def obtener_color_nivel_alerta(nivel):
+    """Colores para NIVEL_ALERTA_GRILLA: 0=Baja, 1=Media, 2=Alta."""
+    try:
+        nivel = int(nivel)
+    except (TypeError, ValueError):
+        nivel = 0
+    if nivel == 2:
+        return [244, 67, 54, 230]      # Alta
+    if nivel == 1:
+        return [255, 235, 59, 140]     # Media
+    return [200, 200, 200, 20]         # Baja
+
 def obtener_color_corte_log(supera):
     """Color binario para superación de corte Youden: 1=Violeta neón, 0=transparente."""
     if supera == 1:
@@ -40,12 +52,14 @@ def obtener_color_dual(doble):
 def preparar_features_geojson(gdf, modo="prob"):
     """
     Convierte un GeoDataFrame en un GeoJSON con colores RGBA inyectados para PyDeck.
-    Soporta: 'prob' (escala Google Flood Hub), 'op' (umbral operativo), 'corte' (corte Youden) y 'dual' (ambas).
+    Soporta: 'prob' (escala probabilística), 'nivel_alerta' (0/1/2), 'op' (umbral operativo), 'corte' (corte Youden) y 'dual' (ambas).
     """
     gdf_copy = gdf.copy()
     
     if modo == "op":
         gdf_copy["fill_color"] = gdf_copy["evento_op"].apply(obtener_color_evento_op)
+    elif modo == "nivel_alerta":
+        gdf_copy["fill_color"] = gdf_copy["nivel_alerta_cod"].apply(obtener_color_nivel_alerta)
     elif modo == "corte":
         gdf_copy["fill_color"] = gdf_copy["supera_corte_log"].apply(obtener_color_corte_log)
     elif modo == "dual":
@@ -66,6 +80,8 @@ def preparar_features_puntos(gdf, modo="prob"):
         
     if modo == "op":
         gdf_alerta = gdf[gdf["evento_op"] == 1].copy()
+    elif modo == "nivel_alerta":
+        gdf_alerta = gdf[gdf["nivel_alerta_cod"] >= 1].copy()
     elif modo == "corte":
         gdf_alerta = gdf[gdf["supera_corte_log"] == 1].copy()
     elif modo == "dual":
@@ -83,7 +99,20 @@ def preparar_features_puntos(gdf, modo="prob"):
         supera_corte = int(row.get("supera_corte_log", 0))
         doble = int(row.get("doble_alerta", 0))
         
-        if modo == "op":
+        nivel_alerta = int(row.get("nivel_alerta_cod", 0))
+
+        if modo == "nivel_alerta":
+            if nivel_alerta >= 2:
+                color_core = [244, 67, 54, 240]
+                color_halo = [244, 67, 54, 80]
+                radio_core = 4000
+                radio_halo = 10000
+            else:
+                color_core = [255, 235, 59, 210]
+                color_halo = [255, 235, 59, 60]
+                radio_core = 3000
+                radio_halo = 7000
+        elif modo == "op":
             color_core = [255, 23, 68, 240]
             color_halo = [255, 23, 68, 80]
             radio_core = 4000
