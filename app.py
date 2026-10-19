@@ -302,9 +302,9 @@ with st.sidebar:
         "Nivel de Alerta:",
         options=[
             "Todas las Celdas",
-            "🔴 Nivel de Alerta: Alta (2)",
-            "🟡 Nivel de Alerta: Media (1)",
-            "⚪ Nivel de Alerta: Baja (0)",
+            "🔴 Nivel de Alerta: Alta",
+            "🟡 Nivel de Alerta: Media",
+            "⚪ Nivel de Alerta: Baja",
             "🚨 Operativa",
             "⚡ Doble Alerta"
         ],
