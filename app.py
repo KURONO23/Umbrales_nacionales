@@ -208,10 +208,9 @@ else:
         with st.expander("ℹ️ **Acerca de ARES NACIONAL**", expanded=True):
             render_contenido_acerca_de()
 
-# Desplegar automáticamente al abrir el visor por primera vez en la sesión
+# Estado de sesión para control del modal (disponible bajo demanda vía botón en la barra lateral)
 if "acerca_de_mostrado" not in st.session_state:
     st.session_state["acerca_de_mostrado"] = True
-    modal_acerca_de()
 
 # ----------------- SIDEBAR: CONTROLES ESTILO GOOGLE FLOOD HUB -----------------
 with st.sidebar:
@@ -280,7 +279,7 @@ opciones_dept = ["Todos los Departamentos"] + depts_disponibles
 
 with st.sidebar:
     st.markdown("#### 🔍 **Navegación Territorial**")
-    dept_sel = st.selectbox("Departamento:", options=opciones_dept, index=0)
+    dept_sel = st.selectbox("Departamento:", options=opciones_dept, index=0, key="sel_departamento")
     
     # Filtrar distritos según departamento
     if dept_sel != "Todos los Departamentos":
@@ -293,7 +292,7 @@ with st.sidebar:
         distritos_disponibles = sorted(gdf[filtro_sug]["DISTRITO"].unique().tolist())
         
     opciones_dist = ["(Nacional / Sin selección)"] + distritos_disponibles
-    dist_sel = st.selectbox("Distrito / Zona:", options=opciones_dist, index=0)
+    dist_sel = st.selectbox("Distrito / Zona:", options=opciones_dist, index=0, key="sel_distrito")
     
     st.markdown("---")
     if st.button("ℹ️ Acerca de ARES Nacional", key="btn_sb_acerca", use_container_width=True, help="Conoce los fundamentos metodológicos, fuentes de datos y autores"):
