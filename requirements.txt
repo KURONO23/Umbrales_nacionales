@@ -4,4 +4,3 @@ pydeck
 pyogrio
 pandas
 shapely
-altair

@@ -9,7 +9,6 @@ if BASE_DIR not in sys.path:
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
-import altair as alt
 from src.data_loader import obtener_fechas_disponibles, cargar_datos_fecha, cargar_red_hidrica, cargar_departamentos
 from src.map_utils import preparar_features_geojson, preparar_features_puntos, crear_mapa_pydeck
 
