@@ -379,38 +379,6 @@ else:
     elif reg == "sur":
         centro_lat, centro_lon, zoom_mapa = -15.80, -71.20, 7.0
 
-# ----------------- KPIS EJECUTIVOS NACIONALES -----------------
-col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
-
-celdas_doble = int(gdf["doble_alerta"].sum())
-celdas_en_alerta_op = int(gdf["evento_op"].sum())
-celdas_criticas = int((gdf["prob"] >= 0.70).sum())
-max_pp = gdf["pp"].max() if not gdf.empty else 0.0
-
-with col_kpi1:
-    st.markdown(f"""<div class="metric-card">
-<div class="metric-title">⚡ DOBLE ALERTA</div>
-<div class="metric-value" style="color: #ff0055;">{celdas_doble}</div>
-</div>""", unsafe_allow_html=True)
-
-with col_kpi2:
-    st.markdown(f"""<div class="metric-card">
-<div class="metric-title">🌊 ALERTA OP (IOP)</div>
-<div class="metric-value" style="color: #ff5252;">{celdas_en_alerta_op}</div>
-</div>""", unsafe_allow_html=True)
-
-with col_kpi3:
-    st.markdown(f"""<div class="metric-card">
-<div class="metric-title">🔴 CRÍTICO (≥70%)</div>
-<div class="metric-value" style="color: #f2cc60;">{celdas_criticas}</div>
-</div>""", unsafe_allow_html=True)
-
-with col_kpi4:
-    st.markdown(f"""<div class="metric-card">
-<div class="metric-title">LLUVIA MÁX 24H</div>
-<div class="metric-value" style="color: #58a6ff;">{max_pp:.1f} <span style="font-size: 0.82rem; font-weight: normal;">mm</span></div>
-</div>""", unsafe_allow_html=True)
-
 # ----------------- PÍLDORAS DE SALTO RÁPIDO A REGIONES VULNERABLES -----------------
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
 with col_b1:
