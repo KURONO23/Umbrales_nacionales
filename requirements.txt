@@ -4,3 +4,6 @@ pydeck
 pyogrio
 pandas
 shapely
+rasterio
+xarray
+scipy

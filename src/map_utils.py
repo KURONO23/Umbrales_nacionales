@@ -211,6 +211,7 @@ def crear_mapa_pydeck(
     punto_foco=None,
     red_hidrica_data=None,
     departamentos_data=None,
+    gfs_data=None,
     centro_lat=-9.19,
     centro_lon=-75.01,
     zoom=4.8,
@@ -263,6 +264,14 @@ def crear_mapa_pydeck(
         layers.append(rios_layer)
 
     # 2. Capa base de polígonos de grilla (con o sin extrusión 3D)
+    if gfs_data:
+        layers.append(pdk.Layer(
+            "GeoJsonLayer", gfs_data, id="precipitacion-gfs",
+            filled=True, stroked=False, get_fill_color="properties.fill_color",
+            pickable=True, auto_highlight=True,
+            highlight_color=[255, 255, 255, 120]
+        ))
+
     grid_layer = pdk.Layer(
         "GeoJsonLayer",
         geojson_data,
@@ -384,6 +393,7 @@ def crear_mapa_pydeck(
             </div>
             {metricas_tooltip}
             <div style="margin-bottom: 3px;"><b>Lluvia 24h:</b> {{pp}} mm · <b>Antecedente:</b> {{ant_log}} mm ({{mejor_ventana_log}}d)</div>
+            {'<div style="margin-bottom: 3px; color: #42c6e2;"><b>GFS ' + str(gfs_data['features'][0]['properties']['fecha_gfs']) + ':</b> {gfs_mm} mm/día</div>' if gfs_data and gfs_data['features'] else ''}
             <div style="color: #8b949e; font-size: 11px; margin-top: 6px; border-top: 1px solid #30363d; padding-top: 4px;">
                 ⚙️ Modelo: {{modelo_origen_txt}}
             </div>

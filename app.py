@@ -9,8 +9,14 @@ if BASE_DIR not in sys.path:
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+import geopandas as gpd
+import rasterio
 from src.data_loader import obtener_fechas_disponibles, cargar_datos_fecha, cargar_red_hidrica, cargar_departamentos
 from src.map_utils import preparar_features_geojson, preparar_features_puntos, crear_mapa_pydeck
+from src.gfs_layer import capas_gfs, preparar_capa_gfs
+from preprocesar_gfs import preparar_si_nuevo
+from shapely.geometry import shape
+from shapely.strtree import STRtree
 
 logo_path_local = os.path.join(BASE_DIR, "img", "ares_logo.png")
 icon_page = logo_path_local if os.path.exists(logo_path_local) else "🌊"
@@ -213,12 +219,10 @@ if "acerca_de_mostrado" not in st.session_state:
 
 # ----------------- SIDEBAR: CONTROLES ESTILO GOOGLE FLOOD HUB -----------------
 with st.sidebar:
-    st.markdown("""
-    <div style="text-align: center; margin-top: -15px; margin-bottom: 14px;">
-        <div style="font-size: 1.35rem; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; line-height: 1.2;">ARES NACIONAL</div>
-        <div style="font-size: 0.68rem; color: #8b949e; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-top: 4px;">DIRECCIÓN DE HIDROLOGÍA — SENAMHI PERÚ</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div style="text-align: center; margin-top: -15px; margin-bottom: 14px;">
+<div style="font-size: 1.35rem; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; line-height: 1.2;">ARES NACIONAL</div>
+<div style="font-size: 0.68rem; color: #8b949e; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-top: 4px;">DIRECCIÓN DE HIDROLOGÍA — SENAMHI PERÚ</div>
+</div>""", unsafe_allow_html=True)
     st.markdown("---")
     
     fechas = obtener_fechas_disponibles()
@@ -292,17 +296,36 @@ with st.sidebar:
         
     opciones_dist = ["(Nacional / Sin selección)"] + distritos_disponibles
     dist_sel = st.selectbox("Distrito / Zona:", options=opciones_dist, index=0, key="sel_distrito")
+
+    st.markdown("#### 🌧️ Pronóstico GFS")
+    mostrar_gfs = st.checkbox("Mostrar precipitación GFS", value=False)
+    archivo_gfs = None
+    fecha_gfs = fecha_sel
+    if mostrar_gfs:
+        try:
+            gfs_disponibles = preparar_si_nuevo(os.path.join(BASE_DIR, "Salidas"))
+        except Exception as err:
+            gfs_disponibles = []
+            st.warning(f"No se pudo preparar el pronóstico GFS: {err}")
+
+        if gfs_disponibles:
+            dias_gfs = [ruta.stem.rsplit("_", 1)[-1] for ruta in gfs_disponibles]
+            if fecha_sel in dias_gfs:
+                archivo_gfs = gfs_disponibles[dias_gfs.index(fecha_sel)]
+                st.caption(f"🌧️ Lluvia GFS sincronizada a la fecha de evaluación (**{fecha_sel}**).")
+            else:
+                st.info(f"No hay capa GFS para la fecha {fecha_sel}.")
+        else:
+            st.warning("No hay capas GFS preparadas en Salidas/.")
     
     st.markdown("---")
     if st.button("ℹ️ Acerca de ARES Nacional", key="btn_sb_acerca", use_container_width=True, help="Conoce los fundamentos metodológicos, fuentes de datos y autores"):
         modal_acerca_de()
 
-    st.markdown("""
-    <div style="margin-top: 12px; padding: 10px 12px; border: 1px solid #8b6f2f; border-radius: 6px; background: rgba(139, 111, 47, 0.16); color: #d8c58a; font-size: 0.72rem; line-height: 1.45;">
-        <b>¡Importante!</b> Los resultados mostrados en este visor son referenciales y pueden contener incertidumbre, sobre todo a pequeñas escalas de trabajo.<br><br>
-        El SENAMHI no se responsabiliza por el uso inadecuado de esta información.
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div style="margin-top: 12px; padding: 10px 12px; border: 1px solid #8b6f2f; border-radius: 6px; background: rgba(139, 111, 47, 0.16); color: #d8c58a; font-size: 0.72rem; line-height: 1.45;">
+<b>¡Importante!</b> Los resultados mostrados en este visor son referenciales y pueden contener incertidumbre, sobre todo a pequeñas escalas de trabajo.<br><br>
+El SENAMHI no se responsabiliza por el uso inadecuado de esta información.
+</div>""", unsafe_allow_html=True)
     
 # Parámetros por defecto para el renderizado del mapa
 mostrar_rios = True
@@ -365,36 +388,28 @@ celdas_criticas = int((gdf["prob"] >= 0.70).sum())
 max_pp = gdf["pp"].max() if not gdf.empty else 0.0
 
 with col_kpi1:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">⚡ DOBLE ALERTA</div>
-        <div class="metric-value" style="color: #ff0055;">{celdas_doble}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="metric-card">
+<div class="metric-title">⚡ DOBLE ALERTA</div>
+<div class="metric-value" style="color: #ff0055;">{celdas_doble}</div>
+</div>""", unsafe_allow_html=True)
 
 with col_kpi2:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">🌊 ALERTA OP (IOP)</div>
-        <div class="metric-value" style="color: #ff5252;">{celdas_en_alerta_op}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="metric-card">
+<div class="metric-title">🌊 ALERTA OP (IOP)</div>
+<div class="metric-value" style="color: #ff5252;">{celdas_en_alerta_op}</div>
+</div>""", unsafe_allow_html=True)
 
 with col_kpi3:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">🔴 CRÍTICO (≥70%)</div>
-        <div class="metric-value" style="color: #f2cc60;">{celdas_criticas}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="metric-card">
+<div class="metric-title">🔴 CRÍTICO (≥70%)</div>
+<div class="metric-value" style="color: #f2cc60;">{celdas_criticas}</div>
+</div>""", unsafe_allow_html=True)
 
 with col_kpi4:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">LLUVIA MÁX 24H</div>
-        <div class="metric-value" style="color: #58a6ff;">{max_pp:.1f} <span style="font-size: 0.82rem; font-weight: normal;">mm</span></div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="metric-card">
+<div class="metric-title">LLUVIA MÁX 24H</div>
+<div class="metric-value" style="color: #58a6ff;">{max_pp:.1f} <span style="font-size: 0.82rem; font-weight: normal;">mm</span></div>
+</div>""", unsafe_allow_html=True)
 
 # ----------------- PÍLDORAS DE SALTO RÁPIDO A REGIONES VULNERABLES -----------------
 col_b1, col_b2, col_b3, col_b4 = st.columns(4)
@@ -421,12 +436,32 @@ puntos_alerta = preparar_features_puntos(gdf_filtrado, modo=modo_clave)
 red_hidrica_data = cargar_red_hidrica() if mostrar_rios else None
 departamentos_data = cargar_departamentos() if mostrar_dept else None
 
+gfs_data = None
+if mostrar_gfs and archivo_gfs:
+    try:
+        gfs_data = preparar_capa_gfs(archivo_gfs)
+        with rasterio.open(archivo_gfs) as gfs_raster:
+            for punto_alerta in puntos_alerta:
+                valor = next(gfs_raster.sample([punto_alerta["coordinates"]], masked=True))[0]
+                punto_alerta["gfs_mm"] = round(float(valor), 1) if not getattr(valor, "mask", False) and pd.notna(valor) else "N/D"
+                punto_alerta["fecha_gfs"] = fecha_gfs
+            for feature in geojson_data["features"]:
+                props = feature["properties"]
+                geom_shape = shape(feature["geometry"])
+                punto = geom_shape.centroid
+                valor = next(gfs_raster.sample([(punto.x, punto.y)], masked=True))[0]
+                props["gfs_mm"] = round(float(valor), 1) if not pd.isna(valor) and not getattr(valor, "mask", False) else "N/D"
+                props["fecha_gfs"] = fecha_gfs
+    except Exception as err:
+        st.warning(f"No se pudo mostrar la capa GFS: {err}")
+
 mapa_deck = crear_mapa_pydeck(
     geojson_data=geojson_data,
     puntos_alerta=puntos_alerta,
     punto_foco=punto_foco,
     red_hidrica_data=red_hidrica_data,
     departamentos_data=departamentos_data,
+    gfs_data=gfs_data,
     centro_lat=centro_lat,
     centro_lon=centro_lon,
     zoom=zoom_mapa,
@@ -441,22 +476,26 @@ components.html(mapa_deck.to_html(as_string=True), height=500, scrolling=False)
 
 # ----------------- LEYENDA FLOTANTE GOOGLE FLOOD HUB -----------------
 rios_leyenda = '<div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 14px; height: 3px; background: #00e5ff; display: inline-block;"></span> <span style="color: #00e5ff; font-weight: 600;">Ríos ANA</span></div>' if mostrar_rios else ''
+gfs_leyenda = '<div style="color: #42c6e2; font-weight: 500;">🌧️ GFS mm/día · 0,1° visual (origen 0,25°)</div>' if gfs_data else ''
 
-leyenda_html = f"""
-<div style="display: flex; justify-content: flex-end; margin-top: -55px; margin-bottom: 20px; padding-right: 20px; position: relative; z-index: 10;">
-    <div style="background: rgba(22, 27, 34, 0.95); backdrop-filter: blur(8px); border: 1px solid #30363d; border-radius: 8px; padding: 10px 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.5); font-family: sans-serif; font-size: 12px;">
-        <div style="color: #8b949e; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Niveles de Alerta Nacional (ARES · Estudio de Umbrales SENAMHI)</div>
-        <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgba(200, 200, 200, 0.2); border: 1px solid #555; border-radius: 3px; display: inline-block;"></span> <span style="color: #8b949e;">Baja</span></div>
-            <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 235, 59); border-radius: 3px; display: inline-block;"></span> <span style="color: #f2cc60;">Media</span></div>
-            <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(244, 67, 54); border-radius: 3px; display: inline-block;"></span> <span style="color: #f85149; font-weight: bold;">Alta</span></div>
-            {rios_leyenda}
-            <div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #00e5ff; display: inline-block; box-shadow: 0 0 8px #00e5ff;"></span> <span style="color: #00e5ff; font-weight: bold;">Foco</span></div>
-        </div>
-    </div>
+leyenda_html = f"""<div style="display: flex; justify-content: flex-end; margin-top: -55px; margin-bottom: 20px; padding-right: 20px; position: relative; z-index: 10;">
+<div style="background: rgba(22, 27, 34, 0.95); backdrop-filter: blur(8px); border: 1px solid #30363d; border-radius: 8px; padding: 10px 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.5); font-family: sans-serif; font-size: 12px;">
+<div style="color: #8b949e; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Niveles de Alerta Nacional (ARES · Estudio de Umbrales SENAMHI)</div>
+<div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
+<div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgba(200, 200, 200, 0.2); border: 1px solid #555; border-radius: 3px; display: inline-block;"></span> <span style="color: #8b949e;">Baja</span></div>
+<div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(255, 235, 59); border-radius: 3px; display: inline-block;"></span> <span style="color: #f2cc60;">Media</span></div>
+<div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: rgb(244, 67, 54); border-radius: 3px; display: inline-block;"></span> <span style="color: #f85149; font-weight: bold;">Alta</span></div>
+{rios_leyenda}
+{gfs_leyenda}
+<div style="display: flex; align-items: center; gap: 6px; border-left: 1px solid #30363d; padding-left: 10px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #00e5ff; display: inline-block; box-shadow: 0 0 8px #00e5ff;"></span> <span style="color: #00e5ff; font-weight: bold;">Foco</span></div>
 </div>
-"""
-st.markdown(leyenda_html, unsafe_allow_html=True)
+</div>
+</div>"""
+
+if hasattr(st, "html"):
+    st.html(leyenda_html)
+else:
+    st.markdown(leyenda_html, unsafe_allow_html=True)
 
 # ----------------- TABLA DE DETALLE Y EXPORTACIÓN SENAMHI -----------------
 with st.expander("📋 **Boletín Ejecutivo: Tabla de Zonas Bajo Alerta & Exportación SENAMHI**", expanded=False):

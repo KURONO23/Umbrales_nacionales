@@ -75,7 +75,7 @@ def obtener_fechas_disponibles():
             if match:
                 fechas.add(match.group(1))
                 
-    lista_fechas = sorted(list(fechas), reverse=True)
+    lista_fechas = sorted(list(fechas))
     return lista_fechas
 
 @st.cache_data(ttl=300, show_spinner=False)
