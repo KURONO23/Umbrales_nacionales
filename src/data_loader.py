@@ -1,6 +1,7 @@
 import os
 import glob
 import re
+import warnings
 import pandas as pd
 import geopandas as gpd
 import streamlit as st
@@ -104,8 +105,10 @@ def cargar_datos_fecha(fecha: str, cache_version: str = "v2_20261013"):
         gdf = gdf.to_crs(epsg=4326)
         
     # Calcular centroides para Tooltip y capas puntuales rápidas
-    gdf["lon"] = gdf.geometry.centroid.x.round(4)
-    gdf["lat"] = gdf.geometry.centroid.y.round(4)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        gdf["lon"] = gdf.geometry.centroid.x.round(4)
+        gdf["lat"] = gdf.geometry.centroid.y.round(4)
     gdf["id_num"] = gdf["id"].astype(float).astype(int)
 
     # Cargar CSV resumen si existe para métricas tabulares completas del estudio

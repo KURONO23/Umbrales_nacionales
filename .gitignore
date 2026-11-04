@@ -48,3 +48,7 @@ test_*.py
 run_server.py
 generar_word.py
 prepare_data.py
+
+# Logs
+logs/
+*.log
