@@ -95,6 +95,7 @@ def detectar_emision_red(logger):
 def limpiar_horizonte_previo(logger, fecha_emision_nueva):
     """Elimina las salidas diarias del horizonte anterior para evitar mezclas."""
     logger.info("Limpiando salidas del horizonte previo en Salidas/...")
+    fecha_tag = fecha_emision_nueva.replace("-", "")
     patrones_limpieza = [
         "grillaPISCO_prob_*.gpkg",
         "resumen_prob_grillaPISCO_*.csv",
@@ -105,7 +106,6 @@ def limpiar_horizonte_previo(logger, fecha_emision_nueva):
         "evento_log_grillaPISCO_*.tif",
         "pp_puntual_grillaPISCO_*.tif",
         "ant_log_grillaPISCO_*.tif",
-        "gfs_pisco_*.tif"
     ]
     eliminados = 0
     for pat in patrones_limpieza:
@@ -115,7 +115,25 @@ def limpiar_horizonte_previo(logger, fecha_emision_nueva):
                 eliminados += 1
             except Exception as e:
                 logger.warning(f"No se pudo eliminar {f.name}: {e}")
-    
+
+    # Limpiar capas GFS que no pertenezcan a la corrida actual
+    for f in SALIDAS_DIR.glob("gfs_pisco_*.tif"):
+        if f"gfs_pisco_{fecha_tag}_" not in f.name:
+            try:
+                f.unlink()
+                eliminados += 1
+            except Exception as e:
+                logger.warning(f"No se pudo eliminar {f.name}: {e}")
+
+    # Limpiar NetCDF y TXT GFS de emisiones anteriores
+    for f in list(SALIDAS_DIR.glob("pp_GFS_*.nc")) + list(SALIDAS_DIR.glob("pp_GFS0p25_*.txt")):
+        if fecha_tag not in f.name:
+            try:
+                f.unlink()
+                eliminados += 1
+            except Exception as e:
+                logger.warning(f"No se pudo eliminar {f.name}: {e}")
+
     # Limpiar también archivos de emisión previa diferentes a la nueva
     for f in SALIDAS_DIR.glob("*_emision_*"):
         if fecha_emision_nueva not in f.name:
@@ -124,7 +142,7 @@ def limpiar_horizonte_previo(logger, fecha_emision_nueva):
                 eliminados += 1
             except Exception as e:
                 logger.warning(f"No se pudo eliminar archivo de emisión anterior {f.name}: {e}")
-                
+
     logger.info(f"Limpieza completada: {eliminados} archivos antiguos eliminados.")
 
 
@@ -252,10 +270,12 @@ def ejecutar_cron_completo(force=False):
         
     # 3. Verificar si ya fue procesada
     marcador_listo = SALIDAS_DIR / f"grillaPISCO_pronostico_emision_{fecha_emision}.gpkg"
-    archivos_gpkg_dias = list(SALIDAS_DIR.glob(f"grillaPISCO_prob_*.gpkg"))
+    archivos_gpkg_dias = list(SALIDAS_DIR.glob("grillaPISCO_prob_*.gpkg"))
+    fecha_tag = fecha_emision.replace("-", "")
+    archivos_gfs_dias = list(SALIDAS_DIR.glob(f"gfs_pisco_{fecha_tag}_*.tif"))
     
-    if not force and marcador_listo.exists() and len(archivos_gpkg_dias) == 10:
-        logger.info(f"La emisión {fecha_emision} ya está completamente procesada ({len(archivos_gpkg_dias)} días listos).")
+    if not force and marcador_listo.exists() and len(archivos_gpkg_dias) == 10 and len(archivos_gfs_dias) == 10:
+        logger.info(f"La emisión {fecha_emision} ya está completamente procesada (10 GPKG y 10 GFS listos).")
         logger.info("Verificando si GitHub requiere sincronización...")
         sincronizar_git(logger, fecha_emision)
         logger.info("Tarea finalizada sin requerir reprocesamiento.")
@@ -266,6 +286,18 @@ def ejecutar_cron_completo(force=False):
     # 4. Limpiar horizonte anterior
     limpiar_horizonte_previo(logger, fecha_emision)
     
+    # 4.1 Descargar corrida GFS desde FTP (equivalente a refrescar WinSCP)
+    logger.info(f"Sincronizando pronóstico GFS para {fecha_emision} desde el servidor FTP...")
+    try:
+        from actualizar_pronostico import descargar_gfs_ftp
+        nc_gfs = descargar_gfs_ftp(destino=SALIDAS_DIR, fecha_emision=fecha_emision)
+        if nc_gfs:
+            logger.info(f"Archivo NetCDF GFS obtenido: {nc_gfs.name}")
+        else:
+            logger.warning("No se descargó NetCDF nativo desde FTP; se utilizará respaldo de red.")
+    except Exception as exc_gfs:
+        logger.warning(f"Aviso en descarga FTP GFS: {exc_gfs}")
+
     # 5. Ejecutar sincronización de salidas y extracción de rasters/vectoriales
     if not ejecutar_procesamiento(logger):
         logger.error("Error durante el procesamiento de datos.")

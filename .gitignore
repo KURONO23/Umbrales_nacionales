@@ -26,6 +26,8 @@ wheels/
 
 # Streamlit
 .streamlit/secrets.toml
+.env
+.env.local
 
 # IDEs & OS
 .vscode/

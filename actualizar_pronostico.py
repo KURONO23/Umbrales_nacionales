@@ -38,6 +38,28 @@ RED_DIR = Path(r"\\DHI-FVJ2HGR\SalidasGFS")
 FTP_HOST_DEFAULT = "ftp.senamhi.gob.pe"
 FTP_BASE_DEFAULT = "HIDROLOGIA/GFS"
 
+
+def load_env_file(env_path: Path):
+    """Carga variables desde archivo .env local si existe."""
+    if not env_path.exists():
+        return
+    try:
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                if k and k not in os.environ:
+                    os.environ[k] = v
+    except Exception:
+        pass
+
+
+load_env_file(BASE_DIR / ".env")
+
 # Geotransform estándar de grilla PISCO (0.1 deg, origen -81.4, 2.0)
 PISCO_TRANSFORM = Affine(0.1, 0.0, -81.4, 0.0, -0.1, 2.0)
 PISCO_CRS = "EPSG:4326"
@@ -45,11 +67,20 @@ PISCO_HEIGHT = 210
 PISCO_WIDTH = 174
 
 
-def descargar_gfs_ftp(destino=SALIDAS_DIR, host=FTP_HOST_DEFAULT, user="senamhi", password="", ruta_base=FTP_BASE_DEFAULT):
-    """Descarga opcionalmente la corrida más reciente de GFS desde el FTP de SENAMHI."""
-    if not password:
-        print("[INFO GFS] Sin contraseña FTP configurada. Se usarán los archivos locales/red existentes.")
-        return None
+def descargar_gfs_ftp(destino=SALIDAS_DIR, fecha_emision=None, host=None, user=None, password=None, ruta_base=None):
+    """
+    Descarga la corrida GFS diaria directamente desde el FTP de SENAMHI.
+    Si se especifica fecha_emision (YYYY-MM-DD o YYYYMMDD), busca esa carpeta.
+    De lo contrario, descarga la carpeta YYYYMMDD más reciente.
+    """
+    host = host or os.getenv("FTP_HOST", FTP_HOST_DEFAULT)
+    user = user or os.getenv("FTP_USER", "senamhi")
+    password = password or os.getenv("FTP_PASS", "serviciosenamhi")
+    ruta_base = ruta_base or os.getenv("FTP_DIR", FTP_BASE_DEFAULT)
+
+    destino = Path(destino)
+    destino.mkdir(parents=True, exist_ok=True)
+
     try:
         print(f"[FTP GFS] Conectando a {host} ({ruta_base})...")
         with FTP(host, timeout=30) as ftp:
@@ -57,23 +88,65 @@ def descargar_gfs_ftp(destino=SALIDAS_DIR, host=FTP_HOST_DEFAULT, user="senamhi"
             ftp.cwd(ruta_base.strip("/"))
             carpetas = sorted([n for n in ftp.nlst() if n.isdigit() and len(n) == 8], reverse=True)
             if not carpetas:
-                print("[FTP GFS] No se encontraron carpetas con formato YYYYMMDD.")
+                print("[FTP GFS] No se encontraron carpetas con formato YYYYMMDD en el FTP.")
                 return None
-            ultima_fecha = carpetas[0]
-            archivo_nc = f"pp_GFS_{ultima_fecha}.nc"
-            ruta_local = Path(destino) / archivo_nc
-            if ruta_local.exists():
-                print(f"[FTP GFS] La corrida {ultima_fecha} ya existe localmente ({archivo_nc}).")
-                return ruta_local
-            print(f"[FTP GFS] Descargando nueva corrida {ultima_fecha}: {archivo_nc}...")
-            ftp.cwd(f"{ruta_base.strip('/')}/{ultima_fecha}")
-            with open(ruta_local, "wb") as f:
-                ftp.retrbinary(f"RETR {archivo_nc}", f.write)
-            print(f"[FTP GFS] Descarga exitosa: {ruta_local}")
-            return ruta_local
+
+            # Determinar fecha objetivo
+            target_tag = None
+            if fecha_emision:
+                target_tag = str(fecha_emision).replace("-", "")
+
+            if target_tag and target_tag in carpetas:
+                carpeta_sel = target_tag
+            else:
+                carpeta_sel = carpetas[0]
+
+            print(f"[FTP GFS] Carpeta seleccionada en FTP: {carpeta_sel}")
+            ftp.cwd(carpeta_sel)
+            archivos_remotos = ftp.nlst()
+
+            nc_nombre = f"pp_GFS_{carpeta_sel}.nc"
+            ruta_local_nc = destino / nc_nombre
+
+            # Limpiar corridas anteriores de pp_GFS_*.nc en destino
+            for f in destino.glob("pp_GFS_*.nc"):
+                if f.name != nc_nombre:
+                    try:
+                        f.unlink()
+                        print(f"[FTP GFS] Eliminada corrida previa: {f.name}")
+                    except Exception:
+                        pass
+
+            if nc_nombre in archivos_remotos:
+                if ruta_local_nc.exists() and ruta_local_nc.stat().st_size > 50000:
+                    print(f"[FTP GFS] {nc_nombre} ya existe localmente ({ruta_local_nc.stat().st_size} bytes).")
+                else:
+                    print(f"[FTP GFS] Descargando {nc_nombre} desde FTP...")
+                    with open(ruta_local_nc, "wb") as f_out:
+                        ftp.retrbinary(f"RETR {nc_nombre}", f_out.write)
+                    print(f"[FTP GFS] Descarga completa de {nc_nombre} ({ruta_local_nc.stat().st_size} bytes).")
+            else:
+                print(f"[FTP GFS] Aviso: No se encontró {nc_nombre} dentro de la carpeta {carpeta_sel}.")
+
+            # Descargar txt opcional si existe
+            txt_nombre = f"pp_GFS0p25_{carpeta_sel}00.txt"
+            if txt_nombre in archivos_remotos:
+                ruta_local_txt = destino / txt_nombre
+                if not ruta_local_txt.exists():
+                    try:
+                        with open(ruta_local_txt, "wb") as f_out:
+                            ftp.retrbinary(f"RETR {txt_nombre}", f_out.write)
+                        print(f"[FTP GFS] Descargado auxiliar: {txt_nombre}")
+                    except Exception:
+                        pass
+
+            return ruta_local_nc if ruta_local_nc.exists() else None
+
     except Exception as exc:
-        print(f"[FTP GFS] Error al consultar FTP: {exc}")
+        print(f"[FTP GFS] Error durante conexión/descarga FTP: {exc}")
+        print("[FTP GFS] Se intentará utilizar archivos GFS locales o de red existentes como contingencia.")
         return None
+
 
 
 def exportar_rasters_desde_netcdf(origen, destino):
@@ -215,6 +288,11 @@ def sincronizar_pronosticos(origen=RED_DIR, destino=SALIDAS_DIR):
     fechas_pronostico = sorted(df_prob["fecha"].unique())
     print(f"Fechas detectadas en el horizonte ({len(fechas_pronostico)} dias):")
     print(", ".join(fechas_pronostico))
+
+    # Descargar corrida GFS desde FTP correspondiente a la emision
+    if fechas_pronostico:
+        print("\nSincronizando pronostico GFS desde FTP...")
+        descargar_gfs_ftp(destino=destino, fecha_emision=fechas_pronostico[0])
 
     # Claves numericas para merge exacto
     gdf_base["_join_key"] = pd.to_numeric(gdf_base["ID_CIUDAD"], errors="coerce")

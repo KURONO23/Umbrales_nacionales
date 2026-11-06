@@ -19,7 +19,7 @@ def salidas_de_corrida(netcdf, destino):
 def preparar_si_nuevo(directorio):
     """Prepara la corrida más reciente solo si cambió el NetCDF o la plantilla."""
     base = Path(directorio)
-    # 1. Buscar primero corrida GFS nativa (ej. pp_GFS_20261104.nc)
+    # 1. Buscar primero corrida GFS nativa (ej. pp_GFS_20261106.nc)
     fuentes = sorted(
         [f for f in base.glob("pp_GFS_*.nc") if f.stem.removeprefix("pp_GFS_").isdigit()],
         reverse=True
@@ -35,6 +35,17 @@ def preparar_si_nuevo(directorio):
     contorno = base.parent / "data" / "departamentos.geojson"
     if not contorno.exists():
         raise FileNotFoundError(f"Falta el contorno nacional: {contorno}")
+
+    # Limpiar capas GFS de corridas anteriores distintas a la actual
+    m = re.search(r'(\d{4})-?(\d{2})-?(\d{2})', fuente.stem)
+    corrida = ''.join(m.groups()) if m else fuente.stem.removeprefix("pp_GFS_")
+    for viejo in base.glob("gfs_pisco_*.tif"):
+        if not viejo.name.startswith(f"gfs_pisco_{corrida}_"):
+            try:
+                viejo.unlink()
+            except Exception:
+                pass
+
     existentes = salidas_de_corrida(fuente, base)
     if len(existentes) == 10 and all(
         ruta.stat().st_mtime_ns >= max(fuente.stat().st_mtime_ns, plantilla.stat().st_mtime_ns, contorno.stat().st_mtime_ns)
