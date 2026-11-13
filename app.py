@@ -230,8 +230,8 @@ with st.sidebar:
     logo_b64, logo_mime = obtener_logo_base64()
     if logo_b64:
         st.markdown(f"""<div style="text-align: center; margin-top: -15px; margin-bottom: 14px;">
-<div style="background: #ffffff; border-radius: 8px; padding: 7px 14px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-width: 92%;">
-    <img src="data:{logo_mime};base64,{logo_b64}" alt="ARES SENAMHI" style="max-height: 52px; width: auto; display: block; margin: 0 auto;" />
+<div style="background: #ffffff; border-radius: 10px; padding: 10px 18px; display: inline-block; box-shadow: 0 4px 14px rgba(0,0,0,0.3); max-width: 96%;">
+    <img src="data:{logo_mime};base64,{logo_b64}" alt="ARES SENAMHI" style="max-height: 104px; width: auto; display: block; margin: 0 auto;" />
 </div>
 <div style="font-size: 0.68rem; color: #8b949e; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-top: 8px;">DIRECCIÓN DE HIDROLOGÍA — SENAMHI PERÚ</div>
 </div>""", unsafe_allow_html=True)
