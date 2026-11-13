@@ -18,7 +18,11 @@ from preprocesar_gfs import preparar_si_nuevo
 from shapely.geometry import shape
 from shapely.strtree import STRtree
 
-logo_path_local = os.path.join(BASE_DIR, "img", "ARES-LOGO.jpg")
+logo_path_local = os.path.join(BASE_DIR, "img", "logo_ARES-01.png")
+if not os.path.exists(logo_path_local):
+    logo_path_local = os.path.join(BASE_DIR, "img", "ares_logo.png")
+if not os.path.exists(logo_path_local):
+    logo_path_local = os.path.join(BASE_DIR, "img", "ARES-LOGO.jpg")
 icon_page = logo_path_local if os.path.exists(logo_path_local) else "🌊"
 
 st.set_page_config(
@@ -30,15 +34,17 @@ st.set_page_config(
 
 def obtener_logo_base64():
     """Retorna el logo corporativo en base64 para renderizado HTML directo de alto rendimiento."""
-    cropped = os.path.join(BASE_DIR, "img", "ares_logo_cropped.jpg")
-    p = cropped if os.path.exists(cropped) else logo_path_local
+    p = os.path.join(BASE_DIR, "img", "logo_ARES-01.png")
+    if not os.path.exists(p):
+        p = logo_path_local
     if os.path.exists(p):
         try:
             with open(p, "rb") as f:
-                return base64.b64encode(f.read()).decode("utf-8")
+                mime = "image/png" if p.lower().endswith(".png") else "image/jpeg"
+                return base64.b64encode(f.read()).decode("utf-8"), mime
         except Exception:
-            return None
-    return None
+            return None, "image/png"
+    return None, "image/png"
 
 # Inyección de CSS para look & feel ejecutivo estilo Google Flood Hub
 st.markdown("""
@@ -221,11 +227,11 @@ if "acerca_de_mostrado" not in st.session_state:
 
 # ----------------- SIDEBAR: CONTROLES ESTILO GOOGLE FLOOD HUB -----------------
 with st.sidebar:
-    logo_b64 = obtener_logo_base64()
+    logo_b64, logo_mime = obtener_logo_base64()
     if logo_b64:
         st.markdown(f"""<div style="text-align: center; margin-top: -15px; margin-bottom: 14px;">
 <div style="background: #ffffff; border-radius: 8px; padding: 7px 14px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-width: 92%;">
-    <img src="data:image/jpeg;base64,{logo_b64}" alt="ARES SENAMHI" style="max-height: 52px; width: auto; display: block; margin: 0 auto;" />
+    <img src="data:{logo_mime};base64,{logo_b64}" alt="ARES SENAMHI" style="max-height: 52px; width: auto; display: block; margin: 0 auto;" />
 </div>
 <div style="font-size: 0.68rem; color: #8b949e; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-top: 8px;">DIRECCIÓN DE HIDROLOGÍA — SENAMHI PERÚ</div>
 </div>""", unsafe_allow_html=True)
